@@ -1,0 +1,33 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Map - %(p0)s', p0=(lot.name)) }}{% endblock %}
+{% block content %}
+<div class="head">
+  <div><h1>{{ lot.name }}</h1><p class="muted">{{ _('%(p0)s spaces · select a space to edit it', p0=(spaces|length)) }}</p></div>
+  <p class="actions"><a class="btn" href="{{ url_for('admin.spaces', lot_id=lot.id) }}">{{ _('List view') }}</a>
+  {% if current_user.is_owner %}
+    <a class="btn" href="{{ url_for('admin.space_new', lot_id=lot.id) }}">{{ _('Add space') }}</a>
+    <form method="post" action="{{ url_for('admin.autolayout', lot_id=lot.id) }}" class="inline"
+          data-confirm="{{ _('Re-arrange all spaces into the default grid? Custom positions will be reset.') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-quiet">{{ _('Reset to grid') }}</button></form>
+  {% endif %}</p>
+</div>
+<ul class="legend" aria-label="{{ _('Legend') }}">
+  {% for st in statuses %}<li><i class="sw s-{{ st }}"></i>{{ status_labels[st] }}</li>{% endfor %}
+</ul>
+<div class="map-wrap">
+<svg class="lotmap" viewBox="0 0 {{ lot.canvas_w }} {{ lot.canvas_h }}" role="group" aria-label="{{ _('Parking lot map') }}">
+  <rect width="{{ lot.canvas_w }}" height="{{ lot.canvas_h }}" class="lotbg"/>
+  {% for s in spaces %}
+  {% set label %}Space {{ s.name }}, {{ kind_labels[s.kind]|tr }}{{ _(', covered') if s.covered }}{{ _(', EV charging') if s.ev_charging }}, {{ status_labels[s.status]|tr }}{% endset %}
+  {% if current_user.is_owner %}<a href="{{ url_for('admin.space_edit', space_id=s.id) }}" aria-label="{{ label }}">{% else %}<g role="img" aria-label="{{ label }}">{% endif %}
+    <g class="space s-{{ s.status }}">
+      <rect x="{{ s.x }}" y="{{ s.y }}" width="{{ s.w }}" height="{{ s.h }}" rx="8"/>
+      <text x="{{ s.x + s.w / 2 }}" y="{{ s.y + s.h / 2 }}" text-anchor="middle" dominant-baseline="middle">{{ s.name }}</text>
+      {% if s.ev_charging %}<text class="tag" x="{{ s.x + s.w - 8 }}" y="{{ s.y + 16 }}" text-anchor="end">EV</text>{% endif %}
+      {% if s.covered %}<text class="tag" x="{{ s.x + 8 }}" y="{{ s.y + 16 }}">C</text>{% endif %}
+    </g>
+  {% if current_user.is_owner %}</a>{% else %}</g>{% endif %}
+  {% endfor %}
+</svg>
+</div>
+{% endblock %}

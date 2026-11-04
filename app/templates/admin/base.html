@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "_avatar.html" import avatar with context %}
+{% block body_class %}admin{% endblock %}
+{% block body %}
+<div class="shell">
+  <nav class="side" aria-label="{{ _('Main') }}">
+    <div class="brand"><span class="brand-badge" aria-hidden="true">P</span><span class="brand-text">{{ _('ParkPilot') }}<small>{{ current_user.tenant.name if current_user.tenant else _('Platform') }}</small></span></div>
+    <a href="{{ url_for('admin.dashboard') }}" {% if request.endpoint == 'admin.dashboard' %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">{{ '🏢' if current_user.role == 'platform_owner' else '📊' }}</span>{{ _('Platform overview') if current_user.role == 'platform_owner' else _('Dashboard') }}</a>
+    {% if current_user.role == 'platform_owner' %}
+    <a href="{{ url_for('admin.platform_api') }}" {% if request.endpoint and (request.endpoint.startswith('admin.platform_api') or request.endpoint.startswith('admin.platform_webhook')) %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🔑</span>{{ _('API & webhooks') }}</a>
+    <a href="{{ url_for('admin.platform_usage') }}" {% if request.endpoint == 'admin.platform_usage' %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">📈</span>{{ _('API usage') }}</a>
+    <a href="{{ url_for('billing.platform_subscriptions') }}" {% if request.endpoint == 'billing.platform_subscriptions' %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">💳</span>{{ _('Subscriptions') }}</a>
+    {% elif current_user.role == 'staff' %}
+    <a href="{{ url_for('staff.dashboard') }}"><span class="nav-ico" aria-hidden="true">📱</span>{{ _('Staff app') }}</a>
+    {% else %}
+    <a href="{{ url_for('admin.bookings') }}" {% if request.endpoint in ('admin.bookings','admin.bookings_csv','manage.booking_new','manage.booking_detail') %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">📅</span>{{ _('Bookings') }}</a>
+    <a href="{{ url_for('admin.calendar_view') }}" {% if request.endpoint == 'admin.calendar_view' %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🗓️</span>{{ _('Occupancy') }}</a>
+    <a href="{{ url_for('admin.lots') }}" {% if request.endpoint in ('admin.lots','admin.lot_new','admin.lot_edit','admin.lot_delete') %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🅿️</span>{{ _('Lots') }}</a>
+    {% if current_user.is_owner %}
+    <a href="{{ url_for('manage.extras') }}" {% if request.endpoint in ('manage.extras','manage.extra_edit') %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🧳</span>{{ _('Extras (shuttle, cleaning)') }}</a>
+    <a href="{{ url_for('admin.pricing_rules') }}" {% if request.endpoint in ('admin.pricing_rules','admin.pricing_rule_edit') %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">💶</span>{{ _('Pricing rules') }}</a>
+    <a href="{{ url_for('admin.discounts') }}" {% if request.endpoint in ('admin.discounts','admin.discount_toggle','admin.discount_edit') %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🏷️</span>{{ _('Discount codes') }}</a>
+    <a href="{{ url_for('alerts.center') }}" {% if request.endpoint == 'alerts.center' %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🔔</span>{{ _('Notification centre') }}</a>
+    <a href="{{ url_for('manage.invoices') }}" {% if request.endpoint in ('manage.invoices','manage.invoice_settings') %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🧾</span>{{ _('Invoices') }}</a>
+    <a href="{{ url_for('reports.overview') }}" {% if request.endpoint == 'reports.overview' %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">📊</span>{{ _('Reports') }}</a>
+    <a href="{{ url_for('billing.overview') }}" {% if request.endpoint == 'billing.overview' %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">💳</span>{{ _('Plan & billing') }}</a>
+    <a href="{{ url_for('admin.brand_settings') }}" {% if request.endpoint == 'admin.brand_settings' %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🎨</span>{{ _('Brand & domain') }}</a>
+    <a href="{{ url_for('admin.translations') }}" {% if request.endpoint in ('admin.translations','admin.translation_delete') %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🌍</span>{{ _('Translations') }}</a>
+    <a href="{{ url_for('admin.content_list') }}" {% if request.endpoint in ('admin.content_list','admin.content_new','admin.content_edit') %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">📝</span>{{ _('Blog & FAQs') }}</a>
+    <a href="{{ url_for('admin.team') }}" {% if request.endpoint in ('admin.team','admin.team_member_active','admin.team_member_edit','admin.team_member_delete') %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">👥</span>{{ _('Team') }}</a>
+    <a href="{{ url_for('admin.inspection_settings') }}" {% if request.endpoint == 'admin.inspection_settings' %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🚗</span>{{ _('Vehicle checks') }}</a>
+    {% endif %}
+    <a href="{{ url_for('staff.disputes') }}"><span class="nav-ico" aria-hidden="true">⚠️</span>{{ _('Disputes') }}</a>
+    <a href="{{ url_for('staff.dashboard') }}"><span class="nav-ico" aria-hidden="true">📱</span>{{ _('Staff app') }}</a>
+    {% endif %}
+    {% block nav_extra %}{% endblock %}
+  </nav>
+  <div class="content-col">
+  <header class="topbar">
+    <div class="topbar-title"><span class="topbar-tenant">{{ current_user.tenant.name if current_user.tenant else _('ParkPilot Platform') }}</span></div>
+    <div class="topbar-user">
+      {% include "_alerts_bell.html" %}
+      {% include "_lang_switch.html" %}
+      <a class="user-chip" href="{{ url_for('auth.account') }}" title="{{ _('My profile') }}" aria-label="{{ _('My profile') }}">{{ avatar(current_user) }}
+        <span class="user-meta"><strong>{{ current_user.name or current_user.email }}</strong><small>{{ current_user.role|replace('_', ' ')|title|tr }}</small></span></a>
+      <form method="post" action="{{ url_for('auth.logout') }}" class="topbar-signout">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn-signout" type="submit" aria-label="{{ _('Sign out') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span class="signout-label">{{ _('Sign out') }}</span></button>
+      </form>
+    </div>
+  </header>
+  <main id="main" class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}<div class="flash {{ cat }}" role="status">{{ msg }}</div>{% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+  </div>
+</div>
+<script defer src="{{ url_for('static', filename='js/tables.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/alerts.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Luxury Parking"><defs>
+  <linearGradient id="gap" gradientUnits="userSpaceOnUse" x1="40" y1="30" x2="170" y2="170"><stop offset="0" stop-color="#F0D58C"/><stop offset=".55" stop-color="#D2A845"/><stop offset="1" stop-color="#B8862B"/></linearGradient>
+  <linearGradient id="nap" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#14304A"/><stop offset="1" stop-color="#07131F"/></linearGradient>
+</defs><rect width="200" height="200" rx="44" fill="url(#nap)"/><circle cx="100" cy="100" r="84" fill="none" stroke="url(#gap)" stroke-width="2.2"/><circle cx="100" cy="100" r="77" fill="none" stroke="url(#gap)" stroke-width=".9" opacity=".55"/><g fill="none" stroke="url(#gap)" stroke-width="13" stroke-linejoin="miter" stroke-linecap="butt" transform="translate(-4 0)">
+    <path d="M70 43.5V150H140"/>
+    <path d="M63.5 50H110A30 30 0 0 1 110 110H63.5"/>
+  </g>
+<g transform="translate(97 80) rotate(-38) scale(.88)" fill="url(#gap)">
+    <path d="M-20 -2.4 L12 -2.4 Q23 0 12 2.4 L-20 2.4 Z"/>
+    <path d="M5 -2 L-8 -20 L-2.5 -20 L15 -2 Z"/><path d="M5 2 L-8 20 L-2.5 20 L15 2 Z"/>
+    <path d="M-16 -2 L-21 -9.5 L-15.5 -9.5 L-8 -2 Z"/><path d="M-16 2 L-21 9.5 L-15.5 9.5 L-8 2 Z"/>
+  </g></svg>

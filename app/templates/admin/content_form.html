@@ -1,0 +1,15 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('%(p0)s content - ParkPilot', p0=(_('Edit') if page else _('New'))) }}{% endblock %}
+{% block content %}
+<div class="head"><h1>{{ _('%(p0)s content', p0=(_('Edit') if page else _('New'))) }}</h1><a class="btn" href="{{ url_for('admin.content_list') }}">{{ _('Back to content') }}</a></div>
+<section class="panel">
+  <form method="post" class="form">
+    {{ form.hidden_tag() }}
+    {% for field in (form.kind, form.locale, form.slug, form.title, form.summary, form.body, form.seo_title, form.seo_description) %}
+    <div class="field">{{ field.label }}{{ field() }}{% for error in field.errors %}<small class="err">{{ _(error) }}</small>{% endfor %}</div>
+    {% endfor %}
+    <label class="check">{{ form.published() }} {{ form.published.label.text }}</label>
+    <button class="btn btn-primary">{{ _('Save content') }}</button>
+  </form>
+</section>
+{% endblock %}

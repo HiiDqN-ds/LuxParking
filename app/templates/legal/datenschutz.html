@@ -1,0 +1,22 @@
+{% extends "legal/_base.html" %}
+{% block title %}Datenschutzerklärung{% endblock %}
+{% block content %}
+<h1>Datenschutzerklärung</h1>
+<h2>1. Verantwortlicher</h2>
+<p>{{ v(legal.company) }}, {{ v(legal.street) }}, {{ v(legal.city) }}. E-Mail: {{ v(legal.email) }}, Telefon: {{ v(legal.phone) }}.</p>
+<h2>2. Hosting und Server-Logs</h2>
+<p>Beim Aufruf der Website verarbeitet unser Hosting-Anbieter ({{ v(legal.hosting) }}) technisch notwendige Daten wie IP-Adresse, Datum, Uhrzeit und aufgerufene Seite, um die Seite auszuliefern und sicher zu betreiben (Art. 6 Abs. 1 lit. f DSGVO). Wir binden keine Schriftarten, Skripte oder Tracking-Dienste externer Anbieter ein; alle Bestandteile der Seite werden von unserem Server geladen.</p>
+<h2>3. Cookies</h2>
+<p>Wir setzen nur technisch notwendige Cookies, zum Beispiel für Sicherheit (CSRF-Schutz) und die Anmeldung im Betreiberbereich. Eine Einwilligung ist dafür nicht erforderlich (§ 25 Abs. 2 TDDDG). Wir verwenden keine Analyse- oder Werbe-Cookies.</p>
+<h2>4. Buchung</h2>
+<p>Für Reservierung und Buchung verarbeiten wir Name, E-Mail-Adresse, Telefonnummer, Kennzeichen, Fahrzeugmarke und -modell, Zeitraum, gewählten Stellplatz, Preis, optionale Rechnungsangaben und Anmerkungen. Zweck ist die Durchführung des Vertrags (Art. 6 Abs. 1 lit. b DSGVO). Buchungs- und Rechnungsdaten bewahren wir entsprechend den gesetzlichen Aufbewahrungsfristen auf (Art. 6 Abs. 1 lit. c DSGVO, u. a. § 147 AO, § 257 HGB).</p>
+<h2>5. Zahlung</h2>
+<p>Bei Kartenzahlung leiten wir Sie zu Stripe Payments Europe Ltd., Irland, weiter. Stripe verarbeitet die Zahlungsdaten als eigener Verantwortlicher; wir erhalten keine vollständigen Kartendaten, sondern nur den Zahlungsstatus (Art. 6 Abs. 1 lit. b DSGVO). Es kann eine Übermittlung in Drittländer stattfinden; Stripe stützt sich dafür auf Standardvertragsklauseln und das EU-US Data Privacy Framework.</p>
+<h2>6. E-Mail-Bestätigung</h2>
+<p>Wir senden die Buchungsbestätigung mit Link und QR-Code an Ihre E-Mail-Adresse über unseren E-Mail-Dienstleister (Auftragsverarbeitung, Art. 28 DSGVO).</p>
+<h2>7. Fahrzeugdokumentation</h2>
+<p>Bei Übergabe und Rückgabe können Fotos des Fahrzeugs, Schadensvermerke und Ihre Unterschrift erfasst werden, um den Fahrzeugzustand nachzuweisen und Schadensfälle zu klären (Art. 6 Abs. 1 lit. b und f DSGVO). Die Daten werden nicht öffentlich gespeichert und nach {{ v(legal.retention) }} gelöscht, sofern kein Schadensfall offen ist.</p>
+<h2>8. Ihre Rechte</h2>
+<p>Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch (Art. 15–21 DSGVO). Für die Ausübung genügt eine E-Mail an {{ v(legal.email) }}. Sie können sich bei einer Aufsichtsbehörde beschweren, zum Beispiel bei der Landesbeauftragten für Datenschutz und Informationsfreiheit Nordrhein-Westfalen, Kavalleriestraße 2–4, 40213 Düsseldorf.</p>
+<p class="fine-print">Hinweis: Dies ist eine Vorlage und ersetzt keine Rechtsberatung. Bitte nennen Sie Ihren Hosting- und E-Mail-Anbieter und lassen Sie den Text vor dem Livegang prüfen.</p>
+{% endblock %}

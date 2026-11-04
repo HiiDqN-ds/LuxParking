@@ -1,0 +1,12 @@
+{% macro tabs(id, samples) %}
+<div class="codetabs" data-tabs="{{ id }}">
+  <div class="tabbar" role="tablist" aria-label="{{ tt('Programmiersprache', 'Language') }}">
+    {% for key, sample in samples.items() %}<button type="button" role="tab" data-lang="{{ key }}" aria-selected="{{ 'true' if loop.first else 'false' }}">{{ sample.label }}</button>{% endfor %}
+    <button type="button" class="copy" data-copy>{{ tt('Kopieren', 'Copy') }}</button>
+  </div>
+  {% for key, sample in samples.items() %}<div class="panel" role="tabpanel" data-lang="{{ key }}"{% if not loop.first %} hidden{% endif %}><pre><code>{{ sample.code }}</code></pre></div>{% endfor %}
+</div>
+{% endmacro %}
+{% macro block(code, label='') %}
+<div class="codetabs"><div class="tabbar">{% if label %}<span class="tab-label">{{ label }}</span>{% endif %}<button type="button" class="copy" data-copy>{{ tt('Kopieren', 'Copy') }}</button></div><div class="panel"><pre><code>{{ code }}</code></pre></div></div>
+{% endmacro %}

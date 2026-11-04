@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% macro v(x) %}{% if x %}{{ x }}{% else %}<mark class="todo">[bitte ergänzen]</mark>{% endif %}{% endmacro %}
+{% block body %}
+<main id="main" class="flow legal">
+  {# The logo has white lettering, so it needs the dark band (same as the booking pages), not a light page. #}
+  <div class="flow-band legal-band">
+    <div class="flow-inner">{% include "public/_topbar.html" %}</div>
+  </div>
+  <div class="legal-wrap">
+    <article class="panel legal-body">{% block content %}{% endblock %}</article>
+  </div>
+</main>
+{% include "public/_footer.html" %}
+{% endblock %}

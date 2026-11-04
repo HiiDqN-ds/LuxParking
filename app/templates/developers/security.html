@@ -1,0 +1,48 @@
+{% extends "developers/base.html" %}
+{% block dev_title %}{{ tt('Sicherheit & DSGVO', 'Security & GDPR') }}{% endblock %}
+{% block content %}
+<article class="dev-prose">
+  <h1>{{ tt('Sicherheit & DSGVO', 'Security & GDPR') }}</h1>
+  <p class="lead">{{ tt('Was die Software technisch leistet, und was Sie als Betreiber oder Integrator selbst regeln müssen. Jede Aussage hier entspricht dem Verhalten des Codes.', 'What the software does technically, and what you as operator or integrator must arrange yourself. Every statement here matches the behaviour of the code.') }}</p>
+
+  <h2>{{ icon('key') }} {{ tt('API-Schlüssel', 'API keys') }}</h2>
+  <ul>
+    <li>{{ tt('Schlüssel werden <b>nur als SHA-256-Hash</b> gespeichert. Der Klartext erscheint genau einmal bei der Erstellung.', 'Keys are stored <b>only as a SHA-256 hash</b>. The plaintext appears exactly once, when created.') }}</li>
+    <li>{{ tt('Rotation und Widerruf jederzeit. Jeder Schlüssel hat <b>Scopes</b>, ein <b>Rate Limit</b>, optional <b>erlaubte Origins</b> (CORS) und kann auf bestimmte <b>Parkplätze</b> beschränkt werden.', 'Rotate or revoke at any time. Every key has <b>scopes</b>, a <b>rate limit</b>, optionally <b>allowed origins</b> (CORS) and can be limited to specific <b>lots</b>.') }}</li>
+    <li>{{ tt('Öffentliche <code>pk_</code>-Schlüssel können nur harmlose Scopes erhalten, nie Verwaltung oder Lesen von Buchungen.', 'Public <code>pk_</code> keys can only get harmless scopes, never administration or reading bookings.') }}</li>
+    <li>{{ tt('Jeder Schlüssel gehört zu genau einem Betreiber. Daten anderer Betreiber sind nicht erreichbar (durch automatisierte Tests abgesichert).', 'Every key belongs to exactly one operator. Other operators’ data is unreachable (covered by automated tests).') }}</li>
+  </ul>
+
+  <h2>{{ icon('lock') }} {{ tt('Transport, Browser, Sitzungen', 'Transport, browser, sessions') }}</h2>
+  <ul>
+    <li>{{ tt('In Produktion: <b>HSTS</b> (2 Jahre, inkl. Subdomains), Session-Cookie mit <code>__Host-</code>-Präfix, <code>Secure</code>, <code>HttpOnly</code>, <code>SameSite=Lax</code>.', 'In production: <b>HSTS</b> (2 years, incl. subdomains), session cookie with <code>__Host-</code> prefix, <code>Secure</code>, <code>HttpOnly</code>, <code>SameSite=Lax</code>.') }}</li>
+    <li>{{ tt('Strenge <b>Content-Security-Policy</b> und <code>frame-ancestors \'none\'</code>. <b>Keine Drittanbieter-Skripte, -Schriften oder Tracker</b>: auch diese Dokumentation wird komplett von diesem Server ausgeliefert (kein Swagger-UI vom CDN).', 'Strict <b>Content-Security-Policy</b> and <code>frame-ancestors \'none\'</code>. <b>No third-party scripts, fonts or trackers</b>: this documentation too is served entirely by this server (no Swagger UI from a CDN).') }}</li>
+    <li>{{ tt('Passwörter: gesalzener Hash, mindestens 12 Zeichen, Sperrliste häufiger Passwörter, Konto-Sperre nach 5 Fehlversuchen (15 Minuten), Sitzungen enden bei Passwortänderung, automatische Abmeldung bei Inaktivität.', 'Passwords: salted hash, at least 12 characters, block list of common passwords, account lock after 5 failed attempts (15 minutes), sessions end on password change, automatic sign-out when idle.') }}</li>
+    <li>{{ tt('Wichtige Aktionen werden in einem Audit-Log festgehalten.', 'Important actions are recorded in an audit log.') }}</li>
+  </ul>
+
+  <h2>{{ icon('shield') }} Webhooks</h2>
+  <ul>
+    <li>{{ tt('Jede Zustellung ist per <b>HMAC-SHA256</b> signiert; das Secret ist rotierbar.', 'Every delivery is signed with <b>HMAC-SHA256</b>; the secret can be rotated.') }}</li>
+    <li>{{ tt('Schutz vor SSRF: nur öffentliche HTTPS-Ziele, Auflösung der Adresse einmalig geprüft und fest verwendet (Schutz vor DNS-Rebinding), <b>keine Weiterleitungen</b>.', 'SSRF protection: public HTTPS targets only, the address is resolved and checked once and then pinned (DNS-rebinding protection), <b>no redirects</b>.') }}</li>
+  </ul>
+
+  <h2>{{ icon('image') }} {{ tt('Daten, Fotos, KI-Chat', 'Data, photos, AI chat') }}</h2>
+  <ul>
+    <li>{{ tt('Fotos der Fahrzeugübergabe liegen in S3-kompatiblem Speicher. Die <b>Region ist einstellbar</b> (Standard <code>eu-central-1</code>, Frankfurt), Dateigröße und Pixelzahl sind begrenzt.', 'Vehicle hand-over photos are kept in S3-compatible storage. The <b>region is configurable</b> (default <code>eu-central-1</code>, Frankfurt); file size and pixel count are limited.') }}</li>
+    <li>{{ tt('Profilfotos werden neu kodiert; dabei entfallen alle Metadaten (z. B. GPS-Position).', 'Profile photos are re-encoded, which removes all metadata (e.g. GPS position).') }}</li>
+    <li>{{ tt('Der optionale <b>KI-Chat</b> speichert keine Gespräche und erhält keine Kundendaten. Ist er mit einem Anthropic-Schlüssel aktiviert, wird der Text, den Besucher eingeben, von Anthropic verarbeitet: das gehört in Ihre Datenschutzerklärung.', 'The optional <b>AI chat</b> does not store conversations and receives no customer data. When enabled with an Anthropic key, the text visitors type is processed by Anthropic: this belongs in your privacy policy.') }}</li>
+    <li>{{ tt('Rechnungen: lückenlose Nummernkreise, Umsatzsteuer ausgewiesen, Gutschrift bei Stornierung.', 'Invoices: gapless number ranges, VAT shown, credit note on cancellation.') }}</li>
+  </ul>
+
+  <h2>{{ icon('check-circle') }} {{ tt('Checkliste für Betreiber und Integratoren', 'Checklist for operators and integrators') }}</h2>
+  <ol>
+    <li>{{ tt('<b>Auftragsverarbeitungsvertrag (AVV)</b> nach Art. 28 DSGVO mit dem Anbieter, der ParkPilot für Sie betreibt oder hostet, und mit jedem Dienstleister (Zahlung, E-Mail/SMS, Speicher, KI).', '<b>Data processing agreement (DPA)</b> under Art. 28 GDPR with whoever runs or hosts ParkPilot for you, and with every service provider (payment, email/SMS, storage, AI).') }}</li>
+    <li>{{ tt('Eintrag im <b>Verzeichnis von Verarbeitungstätigkeiten</b> (Art. 30 DSGVO).', 'Entry in your <b>record of processing activities</b> (Art. 30 GDPR).') }}</li>
+    <li>{{ tt('<b>Datenschutzerklärung</b> aktuell halten: Buchung, Zahlung, E-Mail/SMS, Chat/KI, Fahrzeugfotos.', 'Keep your <b>privacy policy</b> current: booking, payment, email/SMS, chat/AI, vehicle photos.') }}</li>
+    <li>{{ tt('<b>Löschkonzept</b> festlegen. Rechnungen und Buchungsbelege unterliegen gesetzlichen Aufbewahrungsfristen (z. B. HGB, AO).', 'Define a <b>deletion policy</b>. Invoices and booking records are subject to statutory retention periods (e.g. HGB, AO).') }}</li>
+    <li>{{ tt('Als Integrator: <code>sk_</code>-Schlüssel nur serverseitig, in einem Secret-Manager, nie im Browser oder im Quellcode-Repository.', 'As an integrator: <code>sk_</code> keys server-side only, in a secret manager, never in the browser or a source repository.') }}</li>
+  </ol>
+  <p class="note">{{ icon('info') }} {{ tt('Diese Seite beschreibt Software-Funktionen und ist keine Rechtsberatung. Lassen Sie Verträge und Datenschutzdokumente juristisch prüfen.', 'This page describes software features and is not legal advice. Have contracts and privacy documents reviewed by a lawyer.') }}</p>
+</article>
+{% endblock %}

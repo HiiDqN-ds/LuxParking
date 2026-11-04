@@ -1,0 +1,38 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('API usage - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">📈</span> {{ _('API usage') }}</h1><p class="muted">{{ _('Request totals across all parkings') }}{% if selected_tenant %} {{ _('(filtered to %(p0)s)', p0=(tenant_names.get(selected_tenant, selected_tenant))) }}{% endif %}.</p></div></div>
+<form class="filters" method="get">
+  <label>{{ _('Parking') }}<select name="tenant_id"><option value="">{{ _('All parkings') }}</option>{% for t in tenants %}<option value="{{ t.id }}" {% if selected_tenant == t.id %}selected{% endif %}>{{ t.name }}</option>{% endfor %}</select></label>
+  <button class="btn btn-primary">{{ _('Filter') }}</button>
+  <a class="btn" href="{{ url_for('admin.platform_usage') }}">{{ _('Clear') }}</a>
+</form>
+<section class="dashboard-metrics" aria-label="{{ _('API usage summary') }}">
+  <article class="metric"><span><i class="m-ico" aria-hidden="true">📡</i> {{ _('Total requests') }}</span><strong>{{ total_calls }}</strong></article>
+  <article class="metric"><span><i class="m-ico" aria-hidden="true">🚨</i> {{ _('Requests with errors') }}</span><strong>{{ failed_calls }}</strong></article>
+</section>
+<section class="panel">
+  <h2>{{ _('Requests by parking') }}</h2>
+  {% if usage_by_tenant %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>{{ _('Parking') }}</th><th>{{ _('Requests') }}</th><th>{{ _('Errors') }}</th><th>{{ _('Last request') }}</th></tr></thead>
+    <tbody>{% for tid, count, errors, last_used in usage_by_tenant %}
+      <tr><td><a href="{{ url_for('admin.platform_usage', tenant_id=tid) }}">{{ tenant_names.get(tid, tid) }}</a></td><td>{{ count }}</td><td>{{ errors or 0 }}</td>
+        <td>{{ last_used.strftime('%Y-%m-%d %H:%M') if last_used else '—' }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty">{{ _('No API requests recorded yet.') }}</div>{% endif %}
+</section>
+<section class="panel">
+  <h2>{{ _('Requests by endpoint') }}</h2>
+  {% if usage_by_path %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>{{ _('Method') }}</th><th>{{ _('Path') }}</th><th>{{ _('Requests') }}</th><th>{{ _('Errors') }}</th><th>{{ _('Last request') }}</th></tr></thead>
+    <tbody>{% for method, path, count, errors, last_used in usage_by_path %}
+      <tr><td>{{ method }}</td><td><code>{{ path }}</code></td><td>{{ count }}</td><td>{{ errors or 0 }}</td>
+        <td>{{ last_used.strftime('%Y-%m-%d %H:%M') if last_used else '—' }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty">{{ _('No API requests recorded yet.') }}</div>{% endif %}
+</section>
+{% endblock %}

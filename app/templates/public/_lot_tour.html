@@ -1,0 +1,35 @@
+{# Virtual lot walkthrough. Real <img> tags are crawlable; works without JS as a stacked gallery. #}
+{% set _scenes = [
+ ('courtyard', 1200, 1426, [480,800,1200,1600], '50% 62%'),
+ ('main-lot', 1200, 1363, [480,800,1200,1600], '50% 60%'),
+ ('walled-bays', 1200, 676, [480,800,1200], '50% 55%'),
+ ('arrival-bays', 1200, 679, [480,800,1200], '50% 55%')
+] %}
+<section class="lot-tour" id="lot-tour" aria-labelledby="lot-tour-h" data-lot-tour
+         data-pause="{{ t(locale, 'tour.pause') }}" data-play="{{ t(locale, 'tour.play') }}">
+  <h2 id="lot-tour-h">{{ t(locale, 'tour.title') }}</h2>
+  <div class="lt-stage">
+    <ol class="lt-scenes">
+      {% for key, w, h, sizes, fx in _scenes %}
+      {% set n = loop.index %}
+      <li class="lt-scene{{ ' is-on' if loop.first }}" data-scene style="--fx:{{ fx }}">
+        <figure>
+          <img src="{{ url_for('static', filename='img/lot/' ~ key ~ '-1200.webp') }}"
+               srcset="{% for sw in sizes %}{{ url_for('static', filename='img/lot/' ~ key ~ '-' ~ sw ~ '.webp') }} {{ sw }}w{{ ',' if not loop.last }}{% endfor %}"
+               sizes="(min-width:960px) 880px, 100vw" width="{{ w }}" height="{{ h }}"
+               alt="{{ t(locale, 'tour.s' ~ n ~ '.alt') }}" {% if loop.first %}fetchpriority="high"{% else %}loading="lazy" decoding="async"{% endif %}>
+          <figcaption><strong>{{ t(locale, 'tour.s' ~ n ~ '.title') }}</strong> {{ t(locale, 'tour.s' ~ n ~ '.cap') }}</figcaption>
+        </figure>
+      </li>
+      {% endfor %}
+    </ol>
+    <div class="lt-ui" hidden data-ui>
+      <button type="button" class="lt-nav" data-prev aria-label="{{ t(locale, 'tour.prev') }}">&lsaquo;</button>
+      <button type="button" class="lt-nav" data-next aria-label="{{ t(locale, 'tour.next') }}">&rsaquo;</button>
+      <button type="button" class="lt-play" data-play-btn aria-pressed="true">{{ t(locale, 'tour.pause') }}</button>
+    </div>
+  </div>
+  <ul class="lt-steps" hidden data-steps>
+    {% for key, w, h, sizes, fx in _scenes %}<li><button type="button" data-go="{{ loop.index0 }}"{{ ' aria-current="true"' if loop.first }}>{{ t(locale, 'tour.s' ~ loop.index ~ '.title') }}</button></li>{% endfor %}
+  </ul>
+</section>

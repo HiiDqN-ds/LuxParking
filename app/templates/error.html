@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ _('%(p0)s - ParkPilot', p0=(title)) }}{% endblock %}
+{% block body %}
+<main id="main" class="hero">
+  <h1>{{ title }}</h1>
+  <p class="lead">{{ message }}</p>
+  {% if current_user.is_authenticated %}<a class="btn" href="{{ url_for('admin.dashboard') }}">{{ _('Back to dashboard') }}</a>
+  {% else %}<a class="btn" href="{{ url_for('public.home') }}">{{ _('Back to the start page') }}</a>{% endif %}
+</main>
+{% endblock %}

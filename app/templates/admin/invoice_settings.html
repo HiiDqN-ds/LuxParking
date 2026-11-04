@@ -1,0 +1,23 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Invoice settings - ParkPilot') }}{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('manage.invoices') }}">{{ _('← Invoices') }}</a></p>
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">🧾</span> {{ _('Seller details & VAT') }}</h1>
+<p class="muted">{{ _('Printed on every invoice and credit note. Check them with your tax advisor: the platform does not decide which VAT rate applies to your services.') }}</p></div></div>
+<section class="panel">
+<form method="post" class="form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="field"><label for="invoice_seller">{{ _('Seller address block') }}</label>
+    <textarea id="invoice_seller" name="invoice_seller" rows="4" maxlength="600" placeholder="{{ _('Company name
+Street 1
+12345 City
+Commercial register, managing director') }}">{{ tenant.invoice_seller or '' }}</textarea>
+    <small class="muted">{{ _('One line per row, printed in the footer. The company name at the top is your parking\'s name (%(p0)s).', p0=(tenant.name)) }}</small></div>
+  <div class="row2">
+    <div class="field"><label for="vat_id">{{ _('VAT ID (USt-IdNr.)') }}</label><input id="vat_id" name="vat_id" value="{{ tenant.vat_id or '' }}" maxlength="40" placeholder="DE123456789"></div>
+    <div class="field"><label for="vat_rate">{{ _('VAT included in your prices (%)') }}</label><input id="vat_rate" name="vat_rate" inputmode="decimal" value="{{ tenant.vat_rate if tenant.vat_rate is not none else '' }}" placeholder="{{ _('Empty = platform default (%(p0)s)', p0=(config.get('DEFAULT_VAT_RATE', '19'))) }}"></div>
+  </div>
+  <p class="muted">{{ _('Your prices are treated as gross prices: the VAT amount is calculated out of the total, the customer never pays more than the price shown at checkout.') }}</p>
+  <button class="btn btn-primary">{{ _('Save') }}</button>
+</form></section>
+{% endblock %}

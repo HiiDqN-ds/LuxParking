@@ -1,0 +1,20 @@
+{% from "public/_logo.html" import brand_logo with context %}
+{# Top row of the dark flow band. Optional context: lot, show_links #}
+<header class="flow-top">
+  <a class="brand" href="{{ url_for('public.localized_home', locale=locale) }}">
+    {{ brand_logo(tenant, dark=True) }}
+  </a>
+  {% if lot is defined and lot %}<span class="lot-chip">{{ lot.name }}{% if lot.city %} · {{ lot.city }}{% endif %}</span>{% endif %}
+  <span class="flow-top-spacer"></span>
+  {% if show_links and tenant %}
+  <nav class="public-content-links" aria-label="Tenant information">
+    <a href="{{ url_for('public.localized_content_index', locale=locale, tenant_slug=tenant.slug, kind='blog') }}">{{ t(locale, 'content.blog') }}</a>
+    <a href="{{ url_for('public.localized_content_index', locale=locale, tenant_slug=tenant.slug, kind='faq') }}">{{ t(locale, 'content.faq') }}</a>
+  </nav>
+  {% endif %}
+  {% if language_links %}
+  <nav class="language-switcher" aria-label="{{ t(locale, 'language.label') }}">
+    {% for language in language_links %}<a href="{{ language.url }}" hreflang="{{ language.code }}" lang="{{ language.code }}"{% if language.code == locale %} aria-current="page"{% endif %}>{{ language.label }}</a>{% endfor %}
+  </nav>
+  {% endif %}
+</header>

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "public/_icons.html" import icon %}
+{% block body_class %}booking-page{% endblock %}
+{% block body %}
+<main id="main" class="flow">
+  <div class="flow-band is-cancelled">
+    <div class="flow-inner">
+      {% include "public/_topbar.html" %}
+      <div class="flow-hero confirm-hero">
+        <span class="hero-check" aria-hidden="true">{{ icon('clock') }}</span>
+        <div>
+          <p class="eyebrow">{{ t(locale, 'hold.expired.eyebrow') }}</p>
+          <h1>{{ t(locale, 'hold.expired.title') }}</h1>
+          <p class="lead">{{ t(locale, 'hold.expired.description') }}</p>
+          <div class="actions"><a class="btn btn-primary btn-lg" href="{{ url_for('public.localized_reserve', locale=locale, tenant_slug=tenant.slug, lot_slug=lot.slug) }}">{{ t(locale, 'hold.expired.link') }}</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+{% include "public/_footer.html" %}
+{% endblock %}

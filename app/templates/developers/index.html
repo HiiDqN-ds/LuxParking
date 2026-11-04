@@ -1,0 +1,94 @@
+{% extends "developers/base.html" %}
+{% from "developers/_code.html" import tabs, block with context %}
+{% block dev_title %}{{ tt('Die Parkplatz-API für Deutschland', 'The parking API for Germany') }}{% endblock %}
+{% block content %}
+<section class="dev-hero">
+  <div>
+    <p class="eyebrow">{{ icon('sparkles') }} {{ tt('Für Flughafen-Parken, Reiseportale, Hotels und Firmen', 'For airport parking, travel portals, hotels and companies') }}</p>
+    <h1>{{ tt('Die Parkplatz-API für Deutschland', 'The parking API for Germany') }}</h1>
+    <p class="lead">{{ tt('Verfügbarkeit, verbindliche Preise, Buchung, Rechnung nach deutschem Recht und Webhooks: eine saubere REST-API, die Sie an einem Nachmittag integrieren.', 'Availability, binding prices, booking, German-law invoices and webhooks: one clean REST API you can integrate in an afternoon.') }}</p>
+    <p class="hero-actions">
+      <a class="btn btn-primary" href="{{ url_for('developers.reference', lang=lang) }}">{{ icon('check') }} {{ tt('API-Referenz', 'API reference') }}</a>
+      <a class="btn" href="#quickstart">{{ tt('Schnellstart', 'Quickstart') }}</a>
+      <a class="btn" href="{{ url_for('developers.postman') }}">Postman</a>
+      <a class="btn" href="{{ url_for('developers.openapi_download') }}">OpenAPI 3.1</a>
+    </p>
+  </div>
+  <div class="hero-card" aria-hidden="true">
+    <div class="hero-card-bar"><i></i><i></i><i></i></div>
+    <pre><code><b>POST</b> /v1/quotes
+{
+  "lot_id": 1, "space_id": 12,
+  "from": "2026-12-20T08:00:00+01:00",
+  "to":   "2026-12-27T20:00:00+01:00"
+}
+
+<b>200</b> OK
+{ "quote": { "total": "69.30", "currency": "EUR" } }</code></pre>
+  </div>
+</section>
+
+<section class="dev-grid" aria-label="{{ tt('Funktionen', 'Features') }}">
+  <article class="dev-card">{{ icon('clock', 'ic-lg') }}<h3>{{ tt('Live-Verfügbarkeit', 'Live availability') }}</h3><p>{{ tt('Status und Preis pro Stellplatz für jeden Zeitraum, mit Koordinaten für Lagepläne.', 'State and price per space for any period, with coordinates for lot maps.') }}</p></article>
+  <article class="dev-card">{{ icon('shield', 'ic-lg') }}<h3>{{ tt('Verbindliche Preise', 'Binding prices') }}</h3><p>{{ tt('Das Angebot ist der Buchungspreis: Staffeln, Saisonregeln, Rabattcodes und Zusatzleistungen wie Shuttle.', 'The quote is the booking price: tiers, seasonal rules, discount codes and extras like the shuttle.') }}</p></article>
+  <article class="dev-card">{{ icon('mail', 'ic-lg') }}<h3>{{ tt('Rechnung nach deutschem Recht', 'German-law invoices') }}</h3><p>{{ tt('PDF-Rechnung mit Umsatzsteuer-Ausweis und lückenlosen Nummern, Gutschrift bei Stornierung.', 'PDF invoice with VAT shown and gapless numbers, credit note on cancellation.') }}</p></article>
+  <article class="dev-card">{{ icon('key', 'ic-lg') }}<h3>{{ tt('Signierte Webhooks', 'Signed webhooks') }}</h3><p>{{ tt('HMAC-SHA256, automatische Wiederholung mit Backoff, Zustellprotokoll und Secret-Rotation.', 'HMAC-SHA256, automatic retries with backoff, delivery log and secret rotation.') }}</p></article>
+  <article class="dev-card">{{ icon('check-circle', 'ic-lg') }}<h3>{{ tt('Sicher wiederholbar', 'Safe to retry') }}</h3><p>{{ tt('Idempotency-Key bei jeder Änderung, X-Request-Id in jeder Antwort, klare Fehlercodes.', 'Idempotency-Key on every change, X-Request-Id on every response, clear error codes.') }}</p></article>
+  <article class="dev-card">{{ icon('lock', 'ic-lg') }}<h3>{{ tt('DSGVO-freundlich', 'GDPR-friendly') }}</h3><p>{{ tt('Keine Drittanbieter-Skripte, Schlüssel nur als Hash gespeichert, EU-Region für Fotos einstellbar.', 'No third-party scripts, keys stored only as hashes, EU region for photos configurable.') }} <a href="{{ url_for('developers.security', lang=lang) }}">{{ tt('Mehr', 'More') }}</a></p></article>
+</section>
+
+<section id="quickstart" class="dev-section">
+  <h2>{{ tt('Schnellstart: in 4 Schritten zur Buchung', 'Quickstart: a booking in 4 steps') }}</h2>
+  <ol class="steps">
+    <li><b>{{ tt('Schlüssel anlegen', 'Create a key') }}</b><span>{{ tt('Im Admin unter <em>API &amp; Webhooks</em>. <code>sk_</code>-Schlüssel gehören nur auf Ihren Server, <code>pk_</code>-Schlüssel dürfen in Browser (Buchungs-Widget).', 'In the admin under <em>API &amp; webhooks</em>. <code>sk_</code> keys belong on your server only; <code>pk_</code> keys may be used in the browser (booking widget).') }}</span></li>
+    <li><b>{{ tt('Produkte lesen', 'Read products') }}</b><span><code>GET /v1/products</code> {{ tt('liefert Plätze und Tagespreise.', 'returns spaces and daily rates.') }}</span></li>
+    <li><b>{{ tt('Preis berechnen', 'Get a price') }}</b><span><code>POST /v1/quotes</code> {{ tt('(optional mit Zusatzleistungen und Rabattcode).', '(optionally with extras and a discount code).') }}</span></li>
+    <li><b>{{ tt('Reservieren und buchen', 'Hold and book') }}</b><span><code>POST /v1/holds</code> {{ tt('hält den Platz kurz frei, danach', 'keeps the space for a short time, then') }} <code>POST /v1/bookings</code>.</span></li>
+  </ol>
+  {{ tabs('flow', flow) }}
+  <p class="note">{{ icon('info') }} {{ tt('Setzen Sie <code>PARKPILOT_API_KEY</code> als Umgebungsvariable. Für Tests ohne echte Zahlung kann eine Buchung mit <code>"test_payment": true</code> als bezahlt markiert werden (nicht in Produktion).', 'Set <code>PARKPILOT_API_KEY</code> as an environment variable. For tests without a real payment a booking can be marked paid with <code>"test_payment": true</code> (not in production).') }}</p>
+</section>
+
+<section class="dev-section" id="conventions">
+  <h2>{{ tt('Konventionen', 'Conventions') }}</h2>
+  <div class="dev-table-wrap"><table class="dev-table">
+    <tbody>
+      <tr><th>{{ tt('Authentifizierung', 'Authentication') }}</th><td><code>Authorization: Bearer &lt;key&gt;</code>. {{ tt('Jeder Schlüssel hat Scopes, optional erlaubte Origins und erlaubte Parkplätze.', 'Every key has scopes and optionally allowed origins and allowed lots.') }}</td></tr>
+      <tr><th>{{ tt('Format', 'Format') }}</th><td>{{ tt('JSON, UTF-8. <b>Geldbeträge sind Strings mit zwei Nachkommastellen</b> (<code>"19.80"</code>), Zeiten ISO 8601 mit Zeitzone.', 'JSON, UTF-8. <b>Money is a string with two decimals</b> (<code>"19.80"</code>), times are ISO 8601 with a time zone.') }}</td></tr>
+      <tr><th>{{ tt('Idempotenz', 'Idempotency') }}</th><td>{{ tt('Senden Sie <code>Idempotency-Key</code> (8 bis 200 Zeichen) bei jedem POST, PATCH und DELETE. Dieselbe Anfrage mit demselben Schlüssel liefert 24 Stunden lang das erste Ergebnis, statt doppelt zu buchen.', 'Send <code>Idempotency-Key</code> (8 to 200 characters) on every POST, PATCH and DELETE. The same request with the same key returns the first result for 24 hours instead of booking twice.') }}</td></tr>
+      <tr><th>{{ tt('Rate Limit', 'Rate limit') }}</th><td>{{ tt('Pro Schlüssel und Minute. Jede Antwort enthält <code>X-RateLimit-Limit</code> und <code>X-RateLimit-Remaining</code>; darüber gibt es <code>429</code> mit <code>Retry-After</code>.', 'Per key and minute. Every response has <code>X-RateLimit-Limit</code> and <code>X-RateLimit-Remaining</code>; above it you get <code>429</code> with <code>Retry-After</code>.') }}</td></tr>
+      <tr><th>{{ tt('Nachverfolgung', 'Tracing') }}</th><td>{{ tt('Jede Antwort hat <code>X-Request-Id</code>, Fehler enthalten sie auch im Body. Eine eigene ID im Request-Header <code>X-Request-Id</code> wird übernommen.', 'Every response has <code>X-Request-Id</code>, errors repeat it in the body. An id you send in the <code>X-Request-Id</code> request header is kept.') }}</td></tr>
+      <tr><th>{{ tt('Versionen', 'Versioning') }}</th><td>{{ tt('Pfad <code>/v1</code>. Neue Felder und Endpunkte können jederzeit hinzukommen: lesen Sie tolerant. Inkompatible Änderungen erscheinen nur unter einer neuen Version.', 'Path <code>/v1</code>. New fields and endpoints can appear at any time: read tolerantly. Incompatible changes only ship under a new version.') }}</td></tr>
+      <tr><th>{{ tt('Verfügbarkeit', 'Uptime') }}</th><td><code>GET /v1/health</code> {{ tt('ohne Schlüssel, für Ihr Monitoring.', 'needs no key, for your monitoring.') }}</td></tr>
+    </tbody></table></div>
+</section>
+
+<section class="dev-section" id="errors">
+  <h2>{{ tt('Fehler', 'Errors') }}</h2>
+  {% set conflict_msg = tt('Der Stellplatz ist im gewählten Zeitraum nicht mehr frei.', 'The space is no longer free for the selected period.')|striptags %}
+  {{ block('{\n  "error": {\n    "code": "conflict",\n    "message": "' ~ conflict_msg ~ '",\n    "request_id": "req_3e30273eab1947b5b147cded"\n  }\n}', 'HTTP 409') }}
+  <div class="dev-table-wrap"><table class="dev-table">
+    <thead><tr><th>HTTP</th><th>code</th><th>{{ tt('Bedeutung', 'Meaning') }}</th></tr></thead>
+    <tbody>
+      <tr><td>400</td><td><code>invalid_request</code>, <code>invalid_discount</code>, <code>invalid_idempotency_key</code></td><td>{{ tt('Eingabe fehlerhaft oder nicht erlaubt.', 'Malformed or not allowed input.') }}</td></tr>
+      <tr><td>401</td><td><code>authentication_required</code>, <code>invalid_api_key</code></td><td>{{ tt('Schlüssel fehlt, ist ungültig oder widerrufen.', 'Key missing, invalid or revoked.') }}</td></tr>
+      <tr><td>402</td><td><code>plan_limit_reached</code></td><td>{{ tt('Kontingent des Tarifs ausgeschöpft.', 'The plan allowance is used up.') }}</td></tr>
+      <tr><td>403</td><td><code>forbidden</code>, <code>tenant_suspended</code>, <code>test_payment_disabled</code></td><td>{{ tt('Scope oder Origin nicht erlaubt, Konto gesperrt, Testzahlung in Produktion.', 'Scope or origin not allowed, account suspended, test payment in production.') }}</td></tr>
+      <tr><td>404</td><td><code>not_found</code></td><td>{{ tt('Objekt existiert nicht oder ist für diesen Schlüssel unsichtbar.', 'The object does not exist or is invisible to this key.') }}</td></tr>
+      <tr><td>409</td><td><code>conflict</code>, <code>pricing_unavailable</code>, <code>invalid_state</code></td><td>{{ tt('Aktion im aktuellen Zustand nicht möglich, z. B. Platz gerade vergeben.', 'Action not possible in the current state, e.g. the space was just taken.') }}</td></tr>
+      <tr><td>429</td><td><code>rate_limit_exceeded</code></td><td>{{ tt('Warten Sie <code>Retry-After</code> Sekunden.', 'Wait <code>Retry-After</code> seconds.') }}</td></tr>
+      <tr><td>500</td><td><code>internal_error</code></td><td>{{ tt('Unerwartet. Bitte mit <code>request_id</code> melden.', 'Unexpected. Please report with the <code>request_id</code>.') }}</td></tr>
+    </tbody></table></div>
+</section>
+
+<section class="dev-section" id="scopes">
+  <h2>Scopes</h2>
+  <div class="dev-table-wrap"><table class="dev-table">
+    <thead><tr><th>Scope</th><th>{{ tt('Erlaubt', 'Allows') }}</th><th>pk_</th><th>sk_</th></tr></thead>
+    <tbody>
+      {% for scope, de, en, public in [('map:read','Lageplan mit Verfügbarkeit','Lot map with availability',true),('availability:read','Verfügbarkeit und Preise','Availability and prices',true),('products:read','Produkte und Zusatzleistungen','Products and extras',true),('quotes:write','Preise berechnen','Price quotes',true),('holds:write','Plätze reservieren','Hold spaces',true),('bookings:write','Buchen, ändern, stornieren, Check-in/-out','Book, change, cancel, check in/out',true),('bookings:read','Buchungen, Rechnungen lesen','Read bookings and invoices',false),('inspections:read','Übergabeprotokolle lesen','Read inspections',false),('inspections:write','Übergabeprotokolle und Fotos schreiben','Write inspections and photos',false),('keys:manage','API-Schlüssel verwalten','Manage API keys',false),('webhooks:manage','Webhooks verwalten','Manage webhooks',false),('usage:read','Nutzung lesen','Read usage',false)] %}
+      <tr><td><code>{{ scope }}</code></td><td>{{ tt(de, en) }}</td><td>{{ '✓' if public else '–' }}</td><td>✓</td></tr>
+      {% endfor %}
+    </tbody></table></div>
+</section>
+{% endblock %}

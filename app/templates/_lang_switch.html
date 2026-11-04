@@ -1,0 +1,10 @@
+{# Interface language choice for the back office, staff app and login. One language per page: the choice is remembered in a cookie. #}
+<form method="post" action="{{ url_for('uilang.set_language') }}" class="lang-switch">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="next" value="{{ request.full_path.rstrip('?') }}">
+  <label class="visually-hidden" for="ui-lang">{{ _('Language') }}</label>
+  <select id="ui-lang" name="locale" data-autosubmit>
+    {% for code, name in language_options() %}<option value="{{ code }}" {% if code == ui_locale() %}selected{% endif %}>{{ name }}</option>{% endfor %}
+  </select>
+  <noscript><button class="btn" type="submit">{{ _('Change') }}</button></noscript>
+</form>

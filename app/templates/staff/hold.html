@@ -1,0 +1,22 @@
+{% extends "staff/base.html" %}
+{% block title %}{{ _('Temporary hold - ParkPilot Staff') }}{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('staff.dashboard') }}">{{ _('← Staff bookings') }}</a></p>
+<section class="panel">
+  <p class="eyebrow">{{ _('Temporary walk-in hold') }}</p>
+  <h1>{{ _('Space %(p0)s is held', p0=(space.name)) }}</h1>
+  <p class="lead">{{ lot.name }} · {{ space.kind|upper }}</p>
+  <dl class="booking-summary">
+    <div><dt>{{ _('Pick-up') }}</dt><dd>{{ pickup_local.strftime("%Y-%m-%d %H:%M") }} {{ timezone_name }}</dd></div>
+    <div><dt>{{ _('Return') }}</dt><dd>{{ return_local.strftime("%Y-%m-%d %H:%M") }} {{ timezone_name }}</dd></div>
+    <div><dt>{{ _('Estimated total') }}</dt><dd>{% if price is not none %}{{ "%.2f"|format(price) }} {{ currency }}{% else %}{{ _('Price no longer available') }}{% endif %}</dd></div>
+    <div><dt>{{ _('Time remaining') }}</dt><dd><strong id="hold-countdown" data-expires="{{ expires_at.isoformat() }}">10:00</strong></dd></div>
+  </dl>
+  <p class="flash">{{ _('No booking is confirmed and no payment is collected. Complete payment before creating a confirmed booking.') }}</p>
+  <form method="post" action="{{ url_for('staff.release_walk_in_hold', hold_id=hold.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-danger" type="submit">{{ _('Release this hold now') }}</button>
+  </form>
+</section>
+<script src="{{ url_for('static', filename='js/booking.js') }}" defer></script>
+{% endblock %}

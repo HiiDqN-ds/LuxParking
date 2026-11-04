@@ -1,0 +1,15 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Blog and FAQs - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">📝</span> {{ _('Blog & FAQs') }}</h1><p class="muted">{{ _('Published entries receive tenant-scoped, localized public URLs.') }}</p></div><a class="btn btn-primary" href="{{ url_for('admin.content_new') }}">{{ _('New content') }}</a></div>
+<nav class="filters" aria-label="{{ _('Content filters') }}"><a href="{{ url_for('admin.content_list') }}">{{ _('All') }}</a><a href="{{ url_for('admin.content_list', kind='blog') }}">{{ _('Blog') }}</a><a href="{{ url_for('admin.content_list', kind='faq') }}">{{ _('FAQs') }}</a></nav>
+{% if pages %}
+<div class="table-wrap"><table><thead><tr><th>{{ _('Type') }}</th><th>{{ _('Language') }}</th><th>{{ _('Title') }}</th><th>{{ _('Slug') }}</th><th>{{ _('State') }}</th><th></th></tr></thead><tbody>
+  {% for page in pages %}<tr><td>{{ page.kind }}</td><td>{{ page.locale }}</td><td>{{ page.title }}</td><td>{{ page.slug }}</td><td>{{ _('Published') if page.published else _('Draft') }}</td><td>
+    <a href="{{ url_for('admin.content_edit', page_id=page.id) }}">{{ _('Edit') }}</a>
+    {% if page.published %}<a href="{{ url_for('public.localized_content_page', locale=page.locale, tenant_slug=current_user.tenant.slug, kind=page.kind, slug=page.slug) }}">{{ _('View') }}</a>{% endif %}
+    <form method="post" action="{{ url_for('admin.content_delete', page_id=page.id) }}" class="inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger">{{ _('Delete') }}</button></form>
+  </td></tr>{% endfor %}
+</tbody></table></div>
+{% else %}<div class="empty">{{ _('No content entries yet.') }}</div>{% endif %}
+{% endblock %}

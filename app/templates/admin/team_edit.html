@@ -1,0 +1,16 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Edit staff member - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><div><h1>{{ _('Edit staff member') }}</h1><p class="muted">{{ member.email }}</p></div><a class="btn" href="{{ url_for('admin.team') }}">{{ _('Back') }}</a></div>
+<section class="panel">
+  <form method="post" class="form">
+    {{ form.hidden_tag() }}
+    {% for field in (form.name, form.email, form.phone, form.password) %}
+      <div class="field">{{ field.label }}{{ field() }}
+        {% for error in field.errors %}<small class="err">{{ _(error) }}</small>{% endfor %}
+      </div>
+    {% endfor %}
+    <button class="btn btn-primary">{{ _('Save changes') }}</button>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% macro field(f, hint=None) %}
+<div class="field">
+  {{ f.label }}
+  {{ f(**kwargs) }}
+  {% if hint %}<small>{{ _(hint) }}</small>{% endif %}
+  {% for e in f.errors %}<small class="err">{{ _(e) }}</small>{% endfor %}
+</div>
+{% endmacro %}
+
+{% macro check(f) %}
+<label class="check">{{ f() }} <span>{{ f.label.text }}</span></label>
+{% endmacro %}
+
+{% macro status_badge(status, labels) %}
+<span class="badge s-{{ status }}">{{ _(labels[status]) }}</span>
+{% endmacro %}

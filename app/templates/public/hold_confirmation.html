@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% from "public/_icons.html" import icon %}
+{% block body_class %}booking-page{% endblock %}
+{% block body %}
+<main id="main" class="flow">
+  <div class="flow-band">
+    <div class="flow-inner">
+      {% include "public/_topbar.html" %}
+      <div class="flow-hero">
+        <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span>{{ t(locale, 'hold.eyebrow') }}</p>
+        <h1>{{ t(locale, 'checkout.heading') }}</h1>
+        <p class="lead">{{ t(locale, 'checkout.intro') }}</p>
+      </div>
+      {% with step = 3 %}{% include "public/_steps.html" %}{% endwith %}
+    </div>
+  </div>
+  <div class="flow-inner flow-body">
+    {% include "public/_flashes.html" %}
+    <div class="flow-grid">
+      <section class="panel checkout-panel">
+        <form method="post" class="form" id="checkout-form" action="{{ url_for('checkout.localized_book', locale=locale, tenant_slug=tenant.slug, lot_slug=lot.slug, hold_id=hold.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <fieldset class="form-section">
+            <legend><span class="sec-n">1</span>{{ t(locale, 'checkout.section.you') }}</legend>
+            <div class="row2">
+              <div class="field"><label for="first_name">{{ t(locale, 'checkout.first_name') }}</label><input id="first_name" name="first_name" autocomplete="given-name" maxlength="80" required value="{{ draft.get('first_name', '') }}"></div>
+              <div class="field"><label for="last_name">{{ t(locale, 'checkout.last_name') }}</label><input id="last_name" name="last_name" autocomplete="family-name" maxlength="80" value="{{ draft.get('last_name', '') }}"></div>
+            </div>
+            <div class="row2">
+              <div class="field"><label for="email">{{ t(locale, 'checkout.email') }}</label><input id="email" type="email" name="email" value="{{ draft.get('email') or hold.customer_email }}" autocomplete="email" maxlength="255" required></div>
+              <div class="field"><label for="phone">{{ t(locale, 'checkout.phone') }}</label><input id="phone" type="tel" name="phone" autocomplete="tel" maxlength="40" required value="{{ draft.get('phone', '') }}"></div>
+            </div>
+          </fieldset>
+
+          <fieldset class="form-section">
+            <legend><span class="sec-n">2</span>{{ t(locale, 'checkout.section.vehicle') }}</legend>
+            <div class="field"><label for="vehicle_plate">{{ t(locale, 'checkout.plate') }}</label><input id="vehicle_plate" class="plate-input" name="vehicle_plate" maxlength="20" autocapitalize="characters" autocomplete="off" spellcheck="false" required value="{{ draft.get('vehicle_plate', '') }}"></div>
+            <div class="row2">
+              <div class="field"><label for="vehicle_make">{{ t(locale, 'checkout.make') }}</label><input id="vehicle_make" name="vehicle_make" maxlength="60" value="{{ draft.get('vehicle_make', '') }}"></div>
+              <div class="field"><label for="vehicle_model">{{ t(locale, 'checkout.model') }}</label><input id="vehicle_model" name="vehicle_model" maxlength="60" value="{{ draft.get('vehicle_model', '') }}"></div>
+            </div>
+            <details class="more"><summary>{{ t(locale, 'checkout.more') }}</summary>
+              <div class="field"><label for="company">{{ t(locale, 'checkout.company') }}</label><input id="company" name="company" maxlength="120" value="{{ draft.get('company', '') }}"></div>
+              <div class="field"><label for="billing_email">{{ t(locale, 'checkout.billing_email') }}</label><input id="billing_email" type="email" name="billing_email" maxlength="255" value="{{ draft.get('billing_email', '') }}"></div>
+              <div class="field"><label for="notes">{{ t(locale, 'checkout.notes') }}</label><textarea id="notes" name="notes" maxlength="2000">{{ draft.get('notes', '') }}</textarea></div>
+            </details>
+          </fieldset>
+
+          {% if extras %}
+          <fieldset class="form-section extras-choice" data-base-price="{{ price or 0 }}" data-currency="{{ currency }}">
+            <legend><span class="sec-n">3</span>{{ t(locale, 'extras.title') }}</legend>
+            {% for kind in ('shuttle', 'cleaning') %}{% set group = extras|selectattr('kind', 'equalto', kind)|list %}{% if group %}
+            <div class="extra-group" role="radiogroup" aria-label="{{ t(locale, 'extras.' ~ kind) }}">
+              <h3>{{ icon('bus' if kind == 'shuttle' else 'car') }}{{ t(locale, 'extras.' ~ kind) }}</h3>
+              <label class="pay-option extra-option"><input type="radio" name="extra_{{ kind }}" value="" data-price="0" {% if not draft.get('extra_' ~ kind) %}checked{% endif %}><span><strong>{{ t(locale, 'extras.none') }}</strong></span><b>0.00 {{ currency }}</b></label>
+              {% for e in group %}
+              <label class="pay-option extra-option"><input type="radio" name="extra_{{ kind }}" value="{{ e.id }}" data-price="{{ e.price }}" data-per-person="{{ 1 if e.per_person else 0 }}" data-included="{{ e.included_persons if e.per_person else 0 }}" data-extra-person="{{ e.extra_person_price if e.extra_person_price is not none else '' }}" data-max="{{ e.max_persons if e.per_person and e.max_persons else 20 }}" {% if draft.get('extra_' ~ kind) == e.id|string %}checked{% endif %}><span><strong>{{ e.name }}</strong>{% if e.description %}<small>{{ e.description }}</small>{% endif %}{% if e.per_person and e.max_persons and not e.included_persons %}<small>{{ t(locale, 'extras.max_persons', max=e.max_persons) }}</small>{% endif %}{% if e.per_person and e.included_persons %}<small>{{ t(locale, 'extras.included_persons', included=e.included_persons) }}{% if e.extra_person_price is not none %} · {{ t(locale, 'extras.additional_person', price='%.2f'|format(e.extra_person_price) ~ ' ' ~ currency) }}{% endif %}</small>{% endif %}</span><b>+ {{ '%.2f'|format(e.price) }} {{ currency }}{% if e.per_person and not e.included_persons %} {{ t(locale, 'extras.per_person') }}{% endif %}</b></label>
+              {% endfor %}
+              {% if kind == 'shuttle' %}<div class="field passengers-field" hidden><label for="passengers" data-label-bundle="{{ t(locale, 'extras.passengers_bundle', included='{included}') }}" data-label-single="{{ t(locale, 'extras.passengers') }}" data-label-max="{{ t(locale, 'extras.passengers_max', max='{max}') }}">{{ t(locale, 'extras.passengers') }}</label><input id="passengers" name="passengers" type="number" inputmode="numeric" min="1" max="20" value="{{ draft.get('passengers') or 1 }}"><small class="passengers-total" id="passengers-total" aria-live="polite"></small></div>{% endif %}
+              <input class="extra-details" name="extra_details_{{ kind }}" maxlength="255" placeholder="{{ t(locale, 'extras.details') }}" value="{{ draft.get('extra_details_' ~ kind, '') }}" hidden>
+            </div>
+            {% endif %}{% endfor %}
+          </fieldset>
+          {% endif %}
+
+          <fieldset class="form-section pay-choice">
+            <legend><span class="sec-n">{{ 4 if extras else 3 }}</span>{{ t(locale, 'checkout.payment') }}</legend>
+            {% if stripe_enabled %}<label class="pay-option"><input type="radio" name="payment_method" value="card" checked>{{ icon('card') }}<span>{{ t(locale, 'checkout.card') }}</span></label>{% endif %}
+            <label class="pay-option"><input type="radio" name="payment_method" value="arrival"{% if not stripe_enabled %} checked{% endif %}>{{ icon('wallet') }}<span>{{ t(locale, 'checkout.arrival') }}</span></label>
+          </fieldset>
+
+          <label class="check"><input type="checkbox" name="accept_terms" value="1" required><span>{{ t(locale, 'legal.accept') }} <a href="{{ url_for('legal.agb') }}" target="_blank" rel="noopener">{{ t(locale, 'legal.terms') }}</a> · <a href="{{ url_for('legal.datenschutz') }}" target="_blank" rel="noopener">{{ t(locale, 'legal.privacy') }}</a></span></label>
+          <button class="btn btn-primary btn-lg full-width" type="submit">
+            <span>{{ t(locale, 'checkout.confirm') }}</span>
+            {% if price is not none %}<span class="btn-price" data-local-money data-amount="{{ price }}" data-currency="{{ currency }}">{{ "%.2f"|format(price) }} {{ currency }}</span>{% endif %}
+          </button>
+          <ul class="trust-list trust-inline">
+            <li>{{ icon('refund') }}{{ t(locale, 'flow.trust.cancel') }}</li>
+            <li>{{ icon('shield') }}{{ t(locale, 'flow.trust.secure') }}</li>
+          </ul>
+          <p class="fine-print">{{ t(locale, 'checkout.policy') }}</p>
+        </form>
+      </section>
+
+      <aside class="panel summary-panel">
+        <p class="timer" id="hold-timer">
+          <span>{{ icon('clock') }}{{ t(locale, 'hold.remaining') }}</span>
+          <strong id="hold-countdown" data-expires="{{ expires_at.isoformat() }}">10:00</strong>
+          <i class="timer-bar" aria-hidden="true"><b id="hold-progress"></b></i>
+        </p>
+        <div class="summary-space">
+          <span class="space-thumb space-thumb-tile" aria-hidden="true">{{ space.name }}</span>
+          <div><strong>{{ lot.name }}</strong><span>{{ space.name }} · {{ t(locale, 'booking.kind.' + space.kind) }}</span></div>
+        </div>
+        <dl class="booking-summary">
+          <div><dt>{{ t(locale, 'hold.pickup') }}</dt><dd><time data-local-datetime datetime="{{ pickup_local.isoformat() }}">{{ pickup_local.strftime("%Y-%m-%d %H:%M") }} · {{ timezone_name }}</time></dd></div>
+          <div><dt>{{ t(locale, 'hold.return') }}</dt><dd><time data-local-datetime datetime="{{ return_local.isoformat() }}">{{ return_local.strftime("%Y-%m-%d %H:%M") }} · {{ timezone_name }}</time></dd></div>
+          <div class="total"><dt>{{ t(locale, 'hold.total') }}</dt><dd>{% if price is not none %}<span data-local-money data-amount="{{ price }}" data-currency="{{ currency }}">{{ "%.2f"|format(price) }} {{ currency }}</span>{% else %}{{ t(locale, 'booking.price_missing') }}{% endif %}</dd></div>
+        </dl>
+        <p class="fine-print">{{ t(locale, 'hold.no_payment') }}</p>
+        <a class="btn btn-quiet" href="{{ url_for('public.localized_reserve', locale=locale, tenant_slug=tenant.slug, lot_slug=lot.slug) }}">← {{ t(locale, 'hold.back') }}</a>
+      </aside>
+    </div>
+  </div>
+</main>
+{% include "public/_footer.html" %}
+<script src="{{ url_for('static', filename='js/checkout-extras.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/booking.js') }}" defer></script>
+{% endblock %}

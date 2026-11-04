@@ -1,0 +1,19 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import field, check %}
+{% block title %}{{ _('%(p0)s - ParkPilot', p0=(_('Edit lot') if lot else _('New lot'))) }}{% endblock %}
+{% block content %}
+<h1>{{ _('Edit lot') if lot else _('New lot') }}</h1>
+<form method="post" class="form" novalidate>
+  {{ form.hidden_tag() }}
+  {{ field(form.name) }}
+  <div class="row2">{{ field(form.address) }}{{ field(form.city) }}</div>
+  <div class="row2">{{ field(form.lat) }}{{ field(form.lng) }}</div>
+  <div class="row2">{{ field(form.canvas_w, hint=_("Map coordinate space. Spaces are placed inside this area.")) }}{{ field(form.canvas_h) }}</div>
+  {{ field(form.space_count, hint=(_("Add or remove spaces. New spaces fill free spots on the map; only spaces without bookings can be removed.") if lot else _("Spaces are created in a grid on the lot map. You can move, resize or rename them later in the layout editor."))) }}
+  {% if not lot %}<div class="row2">{{ field(form.covered_count, hint=_("How many of the spaces are covered (roofed). Set the exact ones later on the Spaces page.")) }}{{ field(form.ev_count, hint=_("How many spaces have an EV charger.")) }}</div>{% endif %}
+  {{ field(form.background_url, hint=_("Aerial photo shown behind the spaces. Image upload arrives with file storage.")) }}
+  <div class="row2">{{ field(form.base_daily_rate, hint=_("Default daily price for this lot; can be overridden by space-specific rules.")) }}{{ field(form.currency, hint=_("Three-letter ISO code; EUR by default.")) }}</div>
+  {{ check(form.active) }}
+  <p class="actions"><button class="btn btn-primary">{{ _('Save lot') }}</button><a class="btn btn-quiet" href="{{ url_for('admin.lots') }}">{{ _('Cancel') }}</a></p>
+</form>
+{% endblock %}

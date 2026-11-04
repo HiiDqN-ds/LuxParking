@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% from "public/_icons.html" import icon %}
+{% from "public/_logo.html" import brand_logo with context %}
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/lot-tour.css') }}">
+{% endblock %}
+{% block body %}
+<main id="main" class="home">
+  <section class="home-hero">
+    <canvas id="lot3d" class="home-canvas" aria-hidden="true"></canvas>
+    <header class="home-top">
+      <a class="home-logo" href="{{ url_for('public.localized_home', locale=locale) }}">{% if biz.logo_enabled or (tenant and tenant.logo_url) %}{{ brand_logo(tenant, dark=True) }}{% else %}<span class="home-brand">{{ tenant.name if tenant else 'ParkPilot' }}</span>{% endif %}</a>
+      <nav class="home-nav" aria-label="{{ t(locale, 'lp.nav.label') }}">
+        <a href="#vorteile">{{ t(locale, 'lp.nav.features') }}</a>
+        <a href="#ablauf">{{ t(locale, 'lp.nav.process') }}</a>
+        <a href="#anfahrt">{{ t(locale, 'lp.nav.location') }}</a>
+        <a href="#faq">{{ t(locale, 'lp.nav.faq') }}</a>
+      </nav>
+      <div class="home-tools">
+        {% if language_links %}
+        <nav class="language-switcher" aria-label="{{ t(locale, 'language.label') }}">
+          {% for language in language_links %}
+          <a href="{{ language.url }}" hreflang="{{ language.code }}" lang="{{ language.code }}"
+             {% if language.code == locale %}aria-current="page"{% endif %}>{{ language.label }}</a>
+          {% endfor %}
+        </nav>
+        {% endif %}
+        {% if lot %}<a class="btn btn-primary home-top-cta" href="{{ url_for('public.localized_reserve', locale=locale, tenant_slug=tenant.slug, lot_slug=lot.slug) }}">{{ t(locale, 'home.book') }}</a>{% endif %}
+        <details class="home-menu">
+          <summary aria-label="{{ t(locale, 'lp.nav.label') }}"><span class="burger" aria-hidden="true"><i></i><i></i><i></i></span></summary>
+          <nav class="home-menu-panel" aria-label="{{ t(locale, 'lp.nav.label') }}">
+            <a href="#vorteile">{{ t(locale, 'lp.nav.features') }}</a>
+            <a href="#ablauf">{{ t(locale, 'lp.nav.process') }}</a>
+            <a href="#anfahrt">{{ t(locale, 'lp.nav.location') }}</a>
+            <a href="#faq">{{ t(locale, 'lp.nav.faq') }}</a>
+            {% if language_links %}
+            <span class="home-menu-lang" role="group" aria-label="{{ t(locale, 'language.label') }}">
+              {% for language in language_links %}<a href="{{ language.url }}" hreflang="{{ language.code }}" lang="{{ language.code }}"{% if language.code == locale %} aria-current="page"{% endif %}>{{ language.label }}</a>{% endfor %}
+            </span>
+            {% endif %}
+          </nav>
+        </details>
+      </div>
+    </header>
+    <div class="home-copy">
+      <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span>{{ t(locale, 'home.eyebrow') }}</p>
+      {% if lot %}
+      <h1>{{ t(locale, 'home.title.with_lot', lot=lot.name) }}</h1>
+      <p class="lead">{{ t(locale, 'home.description.with_lot', lot=lot.name) }}</p>
+      {% else %}
+      <h1>{{ t(locale, 'home.title.generic') }}</h1>
+      <p class="lead">{{ t(locale, 'home.description.generic') }}</p>
+      {% endif %}
+      <div class="actions">
+        {% if lot %}
+        <a class="btn btn-primary btn-reserve" id="reserve-hero" href="{{ url_for('public.localized_reserve', locale=locale, tenant_slug=tenant.slug, lot_slug=lot.slug) }}">{{ t(locale, 'home.book') }} {{ icon('arrow') }}</a>
+        {% endif %}
+        <a class="btn" href="{{ url_for('auth.login') }}">{{ t(locale, 'home.operator') }}</a>
+      </div>
+      <p class="trust-line">{{ t(locale, 'home.trust') }}</p>
+    </div>
+    <ul class="legend home-legend" aria-label="{{ t(locale, 'booking.legend') }}">
+      <li><span class="sw s-available"></span>{{ t(locale, 'booking.available') }}</li>
+      <li><span class="sw s-reserved"></span>{{ t(locale, 'booking.reserved') }}</li>
+    </ul>
+  </section>
+  <section class="lp-about" aria-labelledby="about-title">
+    <div class="lp-wrap lp-about-grid">
+      <div>
+        <p class="eyebrow">{{ t(locale, 'lp.about.eyebrow') }}</p>
+        <h2 id="about-title">{{ t(locale, 'lp.about.title') }}</h2>
+      </div>
+      <div>
+        <p class="lp-about-text">{{ t(locale, 'lp.about.text') }}</p>
+        <p class="lp-secure">{{ icon('shield') }}<span>{{ t(locale, 'lp.footer.hours_note') }}</span></p>
+      </div>
+    </div>
+  </section>
+
+  {% include "public/_lot_tour.html" %}
+
+  <section class="lp-section" id="vorteile" aria-labelledby="features-title">
+    <div class="lp-wrap">
+      <h2 id="features-title" class="lp-title">{{ t(locale, 'lp.features.title') }}</h2>
+      <ul class="lp-cards">
+        {% for key, ico in [('f1', 'shield'), ('f2', 'bus'), ('f3', 'loop'), ('f4', 'roof'), ('f5', 'users'), ('f6', 'calendar')] %}
+        <li class="lp-card">
+          <span class="lp-ico">{{ icon(ico) }}</span>
+          <h3>{{ t(locale, 'lp.' ~ key ~ '.t') }}</h3>
+          <p>{{ t(locale, 'lp.' ~ key ~ '.d') }}</p>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+
+  <section class="lp-section lp-dark" id="ablauf" aria-labelledby="process-title">
+    <div class="lp-wrap">
+      <h2 id="process-title" class="lp-title">{{ t(locale, 'lp.process.title') }}</h2>
+      <ol class="lp-steps">
+        {% for key in ['s1', 's2', 's3', 's4'] %}
+        <li>
+          <span class="lp-num" aria-hidden="true">{{ loop.index }}</span>
+          <h3>{{ t(locale, 'lp.' ~ key ~ '.t') }}</h3>
+          <p>{{ t(locale, 'lp.' ~ key ~ '.d') }}</p>
+        </li>
+        {% endfor %}
+      </ol>
+    </div>
+  </section>
+
+  <section class="lp-section" id="anfahrt" aria-labelledby="loc-title">
+    <div class="lp-wrap lp-loc">
+      <div>
+        <h2 id="loc-title" class="lp-title">{{ t(locale, 'lp.loc.title') }}</h2>
+        <p class="lp-sub">{{ t(locale, 'lp.loc.subtitle') }}</p>
+        <address class="lp-contact">
+          <div>{{ icon('pin') }}<span><strong>{{ t(locale, 'lp.loc.address') }}</strong>{{ biz.street }}<br>{{ biz.postal_code }} {{ biz.city }}</span></div>
+          <div>{{ icon('phone') }}<span><strong>{{ t(locale, 'lp.loc.phone') }}</strong><a href="{{ biz.phone_href }}" dir="ltr">{{ biz.phone }}</a></span></div>
+          <div>{{ icon('mail') }}<span><strong>{{ t(locale, 'lp.loc.email') }}</strong><a href="mailto:{{ biz.email }}" dir="ltr">{{ biz.email }}</a></span></div>
+        </address>
+        <div class="actions">
+          {% if biz.maps_url %}<a class="btn btn-primary" href="{{ biz.maps_url }}" target="_blank" rel="noopener noreferrer">{{ icon('pin') }} {{ t(locale, 'lp.loc.route') }}</a>{% endif %}
+        </div>
+        {% if biz.maps_url %}<p class="muted fine-print">{{ t(locale, 'lp.loc.maps_note') }}</p>{% endif %}
+        {% if biz.instagram or biz.facebook %}
+        <p class="lp-social"><span>{{ t(locale, 'lp.loc.follow') }}</span>
+          {% if biz.instagram %}<a href="{{ biz.instagram }}" target="_blank" rel="noopener noreferrer" aria-label="{{ _('Instagram') }}">{{ icon('instagram') }}</a>{% endif %}
+          {% if biz.facebook %}<a href="{{ biz.facebook }}" target="_blank" rel="noopener noreferrer" aria-label="{{ _('Facebook') }}">{{ icon('facebook') }}</a>{% endif %}
+        </p>
+        {% endif %}
+      </div>
+      <figure class="lp-route" aria-label="{{ t(locale, 'lp.loc.shuttle') }}: {{ t(locale, 'lp.loc.from') }} → {{ t(locale, 'lp.loc.to') }}">
+        <div class="lp-route-stop"><span class="lp-dot"></span><strong>{{ t(locale, 'lp.loc.from') }}</strong><small>{{ biz.name }}</small></div>
+        <div class="lp-route-line" aria-hidden="true"><span>{{ icon('bus') }}</span><i></i></div>
+        <div class="lp-route-stop"><span class="lp-dot lp-dot-end">{{ icon('plane') }}</span><strong>{{ t(locale, 'lp.loc.to') }}</strong><small>{{ t(locale, 'lp.loc.shuttle') }}</small></div>
+      </figure>
+    </div>
+  </section>
+
+  <section class="home-faq" id="faq" aria-labelledby="home-faq-title">
+    <h2 id="home-faq-title">{{ t(locale, 'home.faq.title') }}</h2>
+    {% for n in range(1, 7) %}
+    <details>
+      <summary>{{ t(locale, 'lp.faq.q' ~ n) }}</summary>
+      <p>{{ t(locale, 'lp.faq.a' ~ n) }}</p>
+    </details>
+    {% endfor %}
+    <details>
+      <summary>{{ t(locale, 'faq.hold.question') }}</summary>
+      <p>{{ t(locale, 'faq.hold.answer') }}</p>
+    </details>
+    {% if tenant %}
+    <nav class="public-content-links" aria-label="{{ _('Tenant information') }}">
+      <a href="{{ url_for('public.localized_content_index', locale=locale, tenant_slug=tenant.slug, kind='blog') }}">{{ t(locale, 'content.blog') }}</a>
+      <a href="{{ url_for('public.localized_content_index', locale=locale, tenant_slug=tenant.slug, kind='faq') }}">{{ t(locale, 'content.faq') }}</a>
+    </nav>
+    {% endif %}
+  </section>
+
+  {% if lot %}
+  <section class="lp-cta" aria-labelledby="cta-title">
+    <div class="lp-wrap">
+      <h2 id="cta-title">{{ t(locale, 'lp.cta.title') }}</h2>
+      <p>{{ t(locale, 'lp.cta.text') }}</p>
+      <a class="btn btn-primary" href="{{ url_for('public.localized_reserve', locale=locale, tenant_slug=tenant.slug, lot_slug=lot.slug) }}">{{ t(locale, 'lp.cta.button') }} {{ icon('arrow') }}</a>
+    </div>
+  </section>
+  {% endif %}
+</main>
+{% if lot %}
+<div class="home-sticky-cta" role="region" aria-label="{{ t(locale, 'home.book') }}">
+  <a class="btn btn-primary" href="{{ url_for('public.localized_reserve', locale=locale, tenant_slug=tenant.slug, lot_slug=lot.slug) }}">{{ t(locale, 'home.book') }} {{ icon('arrow') }}</a>
+</div>
+{% endif %}
+{% include "public/_footer.html" %}
+{% include "public/_chat.html" %}
+<script src="{{ url_for('static', filename='vendor/three.min.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/home-scene.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/lot-tour.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% from "public/_icons.html" import icon %}
+{% from "public/_logo.html" import brand_logo with context %}
+<footer class="site-footer">
+  {% if biz and biz.logo_enabled %}
+  <div class="footer-grid">
+    <div class="footer-brand">
+      {{ brand_logo(tenant, dark=True, cls="footer-logo") }}
+      <p class="muted">{{ biz.address_line }}</p>
+    </div>
+    <div class="footer-contact">
+      <strong>{{ t(locale, 'lp.footer.contact') }}</strong>
+      <a href="{{ biz.phone_href }}" dir="ltr">{{ icon('phone') }} {{ biz.phone }}</a>
+      <a href="mailto:{{ biz.email }}" dir="ltr">{{ icon('mail') }} {{ biz.email }}</a>
+      <span class="footer-social">
+        {% if biz.instagram %}<a href="{{ biz.instagram }}" target="_blank" rel="noopener noreferrer" aria-label="Instagram">{{ icon('instagram') }}</a>{% endif %}
+        {% if biz.facebook %}<a href="{{ biz.facebook }}" target="_blank" rel="noopener noreferrer" aria-label="Facebook">{{ icon('facebook') }}</a>{% endif %}
+      </span>
+    </div>
+  </div>
+  {% endif %}
+  <div class="footer-bottom">
+    <nav aria-label="Rechtliches">
+      <a href="{{ url_for('legal.impressum') }}">{{ t(locale, 'legal.imprint') }}</a>
+      <a href="{{ url_for('legal.datenschutz') }}">{{ t(locale, 'legal.privacy') }}</a>
+      <a href="{{ url_for('legal.agb') }}">{{ t(locale, 'legal.terms') }}</a>
+      <a href="{{ url_for('developers.index') }}">API</a>
+    </nav>
+    <small>© {{ now_year }} {{ (biz.legal_name if biz and biz.logo_enabled else None) or (tenant.name if tenant else 'ParkPilot') }} – {{ t(locale, 'lp.footer.rights') }}</small>
+  </div>
+</footer>

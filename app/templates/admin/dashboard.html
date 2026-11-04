@@ -1,0 +1,46 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import status_badge %}
+{% block title %}{{ _('Dashboard - ParkPilot') }}{% endblock %}
+{% block content %}
+<h1><span class="h-ico" aria-hidden="true">📊</span> {{ _('Dashboard') }}</h1>
+<section class="dashboard-metrics" aria-label="{{ _('Booking summary') }}">
+  <article class="metric"><span><i class="m-ico" aria-hidden="true">📅</i> {{ _('Bookings') }}</span><strong>{{ booking_counts.values()|sum }}</strong></article>
+  <article class="metric"><span><i class="m-ico" aria-hidden="true">🛬</i> {{ _('Upcoming arrivals') }}</span><strong>{{ upcoming_count }}</strong></article>
+  <article class="metric"><span><i class="m-ico" aria-hidden="true">💰</i> {{ _('Paid booking value') }}</span><strong>{{ "%.2f"|format(paid_total) }} {{ current_user.tenant.currency }}</strong></article>
+  <article class="metric"><span><i class="m-ico" aria-hidden="true">⚠️</i> {{ _('Open disputes') }}</span><strong>{{ open_disputes }}</strong></article>
+</section>
+<div class="actions">
+  <a class="btn" href="{{ url_for('admin.bookings') }}">{{ _('Search bookings') }}</a>
+  <a class="btn" href="{{ url_for('admin.calendar_view') }}">{{ _('Occupancy calendar') }}</a>
+  <a class="btn" href="{{ url_for('admin.bookings_csv') }}">{{ _('Export bookings CSV') }}</a>
+</div>
+<section class="panel">
+  <header><h2>{{ _('Recent bookings') }}</h2><a href="{{ url_for('admin.bookings') }}">{{ _('View all') }}</a></header>
+  {% if recent_bookings %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>{{ _('Reference') }}</th><th>{{ _('Customer') }}</th><th>{{ _('Arrival') }}</th><th>{{ _('Status') }}</th><th>{{ _('Payment') }}</th><th>{{ _('Total') }}</th></tr></thead>
+    <tbody>{% for booking in recent_bookings %}
+      <tr><td>{{ booking.booking_ref }}</td><td>{{ booking.customer.first_name }} {{ booking.customer.last_name }}</td>
+        <td>{{ booking.pickup_at.strftime('%Y-%m-%d %H:%M') }}</td><td>{{ booking.status|replace('_',' ')|title|tr }}</td>
+        <td>{{ booking.payment_status|title|tr }}</td><td>{{ booking.total_amount }} {{ booking.currency }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<p class="muted">{{ _('No bookings yet.') }}</p>{% endif %}
+</section>
+{% if not lots %}
+  <div class="empty"><p>{{ _('No lots yet. Create your first lot to start adding spaces.') }}</p>
+  {% if current_user.is_owner %}<a class="btn btn-primary" href="{{ url_for('admin.lot_new') }}">{{ _('Create a lot') }}</a>{% endif %}</div>
+{% endif %}
+{% for lot in lots %}
+<section class="panel">
+  <header><h2>{{ lot.name }}</h2><span class="muted">{{ _('%(p0)s spaces', p0=(counts.get(lot.id, 0))) }}</span></header>
+  <ul class="stats">
+    {% for st in statuses %}<li><strong>{{ by_status.get((lot.id, st), 0) }}</strong> {{ status_labels[st] }}</li>{% endfor %}
+  </ul>
+  <p class="actions">
+    <a class="btn btn-primary" href="{{ url_for('admin.layout', lot_id=lot.id) }}">{{ _('Open map') }}</a>
+    <a class="btn" href="{{ url_for('admin.spaces', lot_id=lot.id) }}">{{ _('Manage spaces') }}</a>
+  </p>
+</section>
+{% endfor %}
+{% endblock %}

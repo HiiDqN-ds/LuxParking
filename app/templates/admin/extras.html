@@ -1,0 +1,27 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Extras - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">🧳</span> {{ _('Extras') }}</h1><p class="muted">{{ _('Sell airport shuttle and car cleaning with a booking. Customers pick them at checkout; staff see and complete them in the staff app.') }}</p></div></div>
+<section class="panel"><h2>{{ _('Add an extra') }}</h2>
+  <form method="post" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row2"><div class="field"><label for="lot_id">{{ _('Lot') }}</label><select id="lot_id" name="lot_id">{% for l in lots %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="kind">{{ _('Type') }}</label><select id="kind" name="kind">{% for k in kinds %}<option value="{{ k }}">{{ k|title|tr }}</option>{% endfor %}</select></div></div>
+    <div class="row2"><div class="field"><label for="name">{{ _('Name') }}</label><input id="name" name="name" maxlength="100" placeholder="{{ _('Airport shuttle') }}" required></div>
+      <div class="field"><label for="price">{{ _('Price') }}</label><input id="price" name="price" inputmode="decimal" value="0.00" required></div></div>
+    <div class="field"><label for="description">{{ _('Description (shown to customers)') }}</label><input id="description" name="description" maxlength="255"></div>
+    <div class="row2"><div class="field"><label for="included_persons">{{ _('Persons included in the price') }}</label><input id="included_persons" name="included_persons" inputmode="numeric" value="0" placeholder="0"><small>{{ _('Shuttle: the price covers this many persons (the operator rule is 2). 0 = the price is charged per person.') }}</small></div>
+      <div class="field"><label for="extra_person_price">{{ _('Price per additional person') }}</label><input id="extra_person_price" name="extra_person_price" inputmode="decimal" value="" placeholder=""><small>{{ _('Leave empty to accept no more than the included persons.') }}</small></div></div>
+    <div class="field"><label for="max_persons">{{ _('Maximum persons per booking') }}</label><input id="max_persons" name="max_persons" inputmode="numeric" value="" placeholder="2"><small>{{ _('Shuttle: the vehicle seats this many persons including luggage (2). Empty = up to 20.') }}</small></div>
+    <label class="check"><input type="checkbox" name="per_person" value="1"><span>{{ _('Price is per person (customer enters the number of passengers)') }}</span></label>
+    <label class="check"><input type="checkbox" name="active" value="1" checked><span>{{ _('Offer it at checkout') }}</span></label>
+    <button class="btn btn-primary">{{ _('Create extra') }}</button>
+  </form></section>
+<section class="panel"><h2>{{ _('Your extras') }}</h2>
+  {% if items %}<div class="table-wrap"><table><thead><tr><th>{{ _('Name') }}</th><th>{{ _('Type') }}</th><th>{{ _('Price') }}</th><th>{{ _('Per person') }}</th><th>{{ _('Persons included') }}</th><th>{{ _('Max persons') }}</th><th>{{ _('Additional person') }}</th><th>{{ _('Offered') }}</th><th></th></tr></thead><tbody>
+  {% for e in items %}<tr><td>{{ e.name }}</td><td>{{ e.kind|title|tr }}</td><td>{{ '%.2f'|format(e.price) }}</td><td>{{ _('Yes') if e.per_person else '-' }}</td><td>{{ e.included_persons or '-' }}</td><td>{{ e.max_persons or '-' }}</td><td>{% if e.included_persons %}{{ '%.2f'|format(e.extra_person_price) if e.extra_person_price is not none else _('not allowed') }}{% else %}-{% endif %}</td><td>{{ _('Yes') if e.active else _('No') }}</td>
+    <td><a class="btn" href="{{ url_for('manage.extra_edit', extra_id=e.id) }}">{{ _('Edit') }}</a>
+      <form method="post" class="inline" action="{{ url_for('manage.extra_delete', extra_id=e.id) }}" data-confirm="{{ _('Delete this extra? Past bookings keep it.') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger">{{ _('Delete') }}</button></form></td></tr>{% endfor %}
+  </tbody></table></div>{% else %}<div class="empty">{{ _('No extras yet.') }}</div>{% endif %}
+</section>
+{% endblock %}

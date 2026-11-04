@@ -1,0 +1,18 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Occupancy - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">🗓️</span> {{ _('Occupancy calendar') }}</h1><p class="muted">{{ _('Booked spaces per day in %(p0)s.', p0=(month_label)) }}</p></div></div>
+<form class="filters" method="get">
+  <label>{{ _('Month') }}<input type="month" name="month" value="{{ month }}"></label>
+  <button class="btn btn-primary">{{ _('Show month') }}</button>
+</form>
+<div class="occupancy-grid">
+  {% for item in occupancy %}
+  <article class="occupancy-day">
+    <div><strong>{{ item.day }}</strong><span>{{ _('%(p0)s / %(p1)s spaces', p0=(item.occupied), p1=(item.spaces)) }}</span></div>
+    <progress max="100" value="{{ item.percent }}" aria-label="{{ _('%(p0)s percent occupied', p0=(item.percent)) }}"></progress>
+    <small>{{ _('%(p0)s%% occupied', p0=(item.percent)) }}</small>
+  </article>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "developers/base.html" %}
+{% block dev_title %}Changelog{% endblock %}
+{% block content %}
+<article class="dev-prose">
+  <h1>Changelog</h1>
+  <p class="lead">{{ tt('Änderungen der API. Neue Felder und Endpunkte sind abwärtskompatibel; inkompatible Änderungen erscheinen nur unter einer neuen Version.', 'API changes. New fields and endpoints are backward compatible; incompatible changes only ship under a new version.') }}</p>
+  <section class="release">
+    <h2>v1.0.0 <small>2026-10-31</small></h2>
+    <ul>
+      <li><b>{{ tt('Neu', 'New') }}</b> {{ tt('Entwicklerportal (Deutsch und Englisch) mit Schnellstart in curl, Python, JavaScript und PHP.', 'Developer portal (German and English) with a quickstart in curl, Python, JavaScript and PHP.') }}</li>
+      <li><b>{{ tt('Neu', 'New') }}</b> {{ tt('Vollständige OpenAPI-3.1-Beschreibung mit Schemas und Beispielen; Postman-Collection zum Import.', 'Complete OpenAPI 3.1 description with schemas and examples; Postman collection to import.') }}</li>
+      <li><b>{{ tt('Neu', 'New') }}</b> <code>X-Request-Id</code> {{ tt('in jeder Antwort und im Fehler-Body (<code>error.request_id</code>); eigene IDs werden übernommen.', 'on every response and in the error body (<code>error.request_id</code>); your own ids are kept.') }}</li>
+      <li><b>{{ tt('Neu', 'New') }}</b> <code>GET /v1/health</code> {{ tt('für Monitoring (ohne Schlüssel).', 'for monitoring (no key).') }} <code>X-ParkPilot-API-Version</code>.</li>
+      <li><b>{{ tt('Geändert', 'Changed') }}</b> <code>/v1/docs</code> {{ tt('leitet auf die selbst gehostete Referenz um (kein Skript mehr von einem Dritt-CDN).', 'redirects to the self-hosted reference (no more script from a third-party CDN).') }}</li>
+      <li><b>{{ tt('Qualität', 'Quality') }}</b> {{ tt('Vertragstests prüfen jede Antwort der echten API gegen die veröffentlichten Schemas.', 'Contract tests check every response of the real API against the published schemas.') }}</li>
+    </ul>
+  </section>
+</article>
+{% endblock %}

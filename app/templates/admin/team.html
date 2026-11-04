@@ -1,0 +1,41 @@
+{% extends "admin/base.html" %}
+{% from "_avatar.html" import avatar with context %}
+{% block title %}{{ _('Team - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">👥</span> {{ _('Team') }}</h1><p class="muted">{{ _('Create staff accounts and control access to the staff workspace.') }}</p></div></div>
+<section class="panel">
+  <h2>{{ _('Add staff member') }}</h2>
+  <form method="post" class="form">
+    {{ form.hidden_tag() }}
+    {% for field in (form.name, form.email, form.phone, form.password, form.role) %}
+      <div class="field">{{ field.label }}{{ field() }}
+        {% for error in field.errors %}<small class="err">{{ _(error) }}</small>{% endfor %}
+      </div>
+    {% endfor %}
+    <p class="muted">{{ _('Use a temporary password of at least 12 characters and share it securely.') }}</p>
+    <button class="btn btn-primary">{{ _('Create staff account') }}</button>
+  </form>
+</section>
+<section class="panel">
+  <h2>{{ _('Team members') }}</h2>
+  {% if members %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>{{ _('Name') }}</th><th>{{ _('Email') }}</th><th>{{ _('Role') }}</th><th>{{ _('Access') }}</th><th></th></tr></thead>
+    <tbody>{% for member in members %}
+      <tr><td><span class="team-name">{{ avatar(member, 'sm') }} {{ member.name }}</span></td><td>{{ member.email }}</td><td>{{ member.role|title|tr }}</td>
+        <td>{{ _('Active') if member.active else _('Inactive') }}</td>
+        <td class="right">{% if member.role == 'staff' %}<a class="btn" href="{{ url_for('admin.team_member_edit', user_id=member.id) }}">{{ _('Edit') }}</a>
+          <form method="post" action="{{ url_for('admin.team_member_active', user_id=member.id) }}" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn">{{ _('Deactivate') if member.active else _('Activate') }}</button>
+        </form>
+          <form method="post" action="{{ url_for('admin.team_member_delete', user_id=member.id) }}" class="inline" data-confirm="{{ _('Delete %(p0)s? This cannot be undone.', p0=(member.email)) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-danger">{{ _('Delete') }}</button>
+        </form>{% else %}<span class="muted">{{ _('Owner') }}</span>{% endif %}</td>
+      </tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty">{{ _('No team members yet.') }}</div>{% endif %}
+</section>
+{% endblock %}

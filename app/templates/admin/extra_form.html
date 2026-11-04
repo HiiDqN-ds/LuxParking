@@ -1,0 +1,19 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Edit extra - ParkPilot') }}{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('manage.extras') }}">{{ _('← Extras') }}</a></p>
+<div class="head"><h1>{{ _('Edit %(p0)s', p0=(extra.name)) }}</h1></div>
+<form method="post" class="panel form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="row2"><div class="field"><label for="kind">{{ _('Type') }}</label><select id="kind" name="kind">{% for k in kinds %}<option value="{{ k }}" {% if extra.kind == k %}selected{% endif %}>{{ k|title|tr }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="price">{{ _('Price') }}</label><input id="price" name="price" value="{{ '%.2f'|format(extra.price) }}" required></div></div>
+  <div class="field"><label for="name">{{ _('Name') }}</label><input id="name" name="name" value="{{ extra.name }}" maxlength="100" required></div>
+  <div class="field"><label for="description">{{ _('Description') }}</label><input id="description" name="description" value="{{ extra.description }}" maxlength="255"></div>
+  <div class="row2"><div class="field"><label for="included_persons">{{ _('Persons included in the price') }}</label><input id="included_persons" name="included_persons" inputmode="numeric" value="{{ extra.included_persons }}" placeholder="2"><small>{{ _('Shuttle: the price covers this many persons (the operator rule is 2). 0 = the price is charged per person.') }}</small></div>
+    <div class="field"><label for="extra_person_price">{{ _('Price per additional person') }}</label><input id="extra_person_price" name="extra_person_price" inputmode="decimal" value="{{ '%.2f'|format(extra.extra_person_price) if extra.extra_person_price is not none else '' }}" placeholder=""><small>{{ _('Leave empty to accept no more than the included persons.') }}</small></div></div>
+  <div class="field"><label for="max_persons">{{ _('Maximum persons per booking') }}</label><input id="max_persons" name="max_persons" inputmode="numeric" value="{{ extra.max_persons or '' }}" placeholder="2"><small>{{ _('Shuttle: the vehicle seats this many persons including luggage (2). Empty = up to 20.') }}</small></div>
+  <label class="check"><input type="checkbox" name="per_person" value="1" {% if extra.per_person %}checked{% endif %}><span>{{ _('Price is per person (customer enters the number of passengers)') }}</span></label>
+  <label class="check"><input type="checkbox" name="active" value="1" {% if extra.active %}checked{% endif %}><span>{{ _('Offer it at checkout') }}</span></label>
+  <button class="btn btn-primary">{{ _('Save') }}</button>
+</form>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block body %}
+<main id="main" class="content-page">
+  <header class="content-header">
+    <a class="brand" href="{{ url_for('public.localized_content_index', locale=locale, tenant_slug=tenant.slug, kind=page.kind) }}">
+      {% if tenant.logo_url and tenant.logo_url.startswith('https://') %}<img class="tenant-logo" src="{{ tenant.logo_url }}" alt="{{ tenant.name }}" loading="eager">{% else %}{{ tenant.name }}{% endif %}
+    </a>
+    <nav class="language-switcher" aria-label="{{ t(locale, 'language.label') }}">
+      {% for language in language_links %}
+      <a href="{{ language.url }}" hreflang="{{ language.code }}" lang="{{ language.code }}">{{ language.label }}</a>
+      {% endfor %}
+    </nav>
+    {% if lot %}<a href="{{ url_for('public.localized_reserve', locale=locale, tenant_slug=tenant.slug, lot_slug=lot.slug) }}">{{ t(locale, 'home.book') }}</a>{% endif %}
+  </header>
+  <article>
+    <p class="eyebrow">{{ page.kind|upper }}</p>
+    <h1>{{ page.title }}</h1>
+    {% if page.summary %}<p class="lead">{{ page.summary }}</p>{% endif %}
+    <div class="content-body">{{ page.body }}</div>
+  </article>
+</main>
+{% endblock %}

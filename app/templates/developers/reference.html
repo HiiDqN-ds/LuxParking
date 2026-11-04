@@ -1,0 +1,55 @@
+{% extends "developers/base.html" %}
+{% block dev_title %}{{ tt('API-Referenz', 'API reference') }}{% endblock %}
+{% block content %}
+<div class="ref-layout">
+  <aside class="ref-nav" aria-label="{{ tt('Inhalt', 'Contents') }}">
+    <label class="sr-only" for="ref-search">{{ tt('Endpunkte filtern', 'Filter endpoints') }}</label>
+    <input id="ref-search" type="search" placeholder="{{ tt('Endpunkte filtern …', 'Filter endpoints …') }}" autocomplete="off">
+    {% for tag, items in groups.items() %}
+    <p class="ref-tag">{{ tag }}</p>
+    <ul>{% for item in items %}<li data-filter="{{ item.method }} {{ item.path }} {{ item.op.summary }}"><a href="#{{ item.anchor }}"><span class="m m-{{ item.method }}">{{ item.method|upper }}</span> {{ item.op.summary }}</a></li>{% endfor %}</ul>
+    {% endfor %}
+    <p class="ref-tag">{{ tt('Downloads', 'Downloads') }}</p>
+    <ul><li><a href="{{ url_for('developers.openapi_download') }}">OpenAPI 3.1 (JSON)</a></li><li><a href="{{ url_for('developers.postman') }}">Postman Collection</a></li></ul>
+  </aside>
+
+  <div class="ref-body">
+    <h1>{{ tt('API-Referenz', 'API reference') }} <small>v{{ spec.info.version }}</small></h1>
+    <p class="lead">{{ tt('Alle Endpunkte mit Parametern, Beispielen und Fehlern. Diese Seite wird aus derselben OpenAPI-Beschreibung erzeugt, gegen die unsere Tests die echte API prüfen.', 'All endpoints with parameters, examples and errors. This page is generated from the same OpenAPI description our tests check the real API against.') }}</p>
+    <p class="note">{{ icon('info') }} {{ tt('Beispiele verwenden', 'Examples use') }} <code>{{ base_url }}</code>. {{ tt('Antworten enthalten immer', 'Responses always include') }} <code>X-Request-Id</code>, <code>X-RateLimit-Limit</code>, <code>X-RateLimit-Remaining</code>.</p>
+
+    {% for tag, items in groups.items() %}
+    <h2 class="ref-h2" id="tag-{{ tag|lower|replace(' ', '-') }}">{{ tag }}</h2>
+    {% for item in items %}
+    <details class="op" id="{{ item.anchor }}" data-filter="{{ item.method }} {{ item.path }} {{ item.op.summary }}">
+      <summary><span class="m m-{{ item.method }}">{{ item.method|upper }}</span><code class="op-path">/v1{{ item.path }}</code><span class="op-sum">{{ item.op.summary }}</span><span class="scope" title="{{ tt('Benötigter Scope', 'Required scope') }}">{{ icon('key') }} {{ item.op['x-required-scope'] }}</span></summary>
+      <div class="op-body">
+        {% if item.op.description %}<p>{{ item.op.description }}</p>{% endif %}
+        {% if item.params %}
+        <h4>{{ tt('Parameter', 'Parameters') }}</h4>
+        <div class="dev-table-wrap"><table class="dev-table"><thead><tr><th>{{ tt('Name', 'Name') }}</th><th>{{ tt('In', 'In') }}</th><th>{{ tt('Typ', 'Type') }}</th><th></th><th>{{ tt('Beschreibung', 'Description') }}</th></tr></thead><tbody>
+          {% for p in item.params %}<tr><td><code>{{ p.name }}</code></td><td>{{ p['in'] }}</td><td>{{ docs.type_label(spec, p.schema) }}</td><td>{% if p.required %}<span class="req">{{ tt('Pflicht', 'required') }}</span>{% endif %}</td><td>{{ p.description }}</td></tr>{% endfor %}
+        </tbody></table></div>
+        {% endif %}
+        {% if item.body %}
+        <h4>{{ tt('Request-Body', 'Request body') }} <small>{{ item.body.mime }}</small></h4>
+        <div class="dev-table-wrap"><table class="dev-table"><thead><tr><th>{{ tt('Feld', 'Field') }}</th><th>{{ tt('Typ', 'Type') }}</th><th></th><th>{{ tt('Beschreibung', 'Description') }}</th></tr></thead><tbody>
+          {% for r in item.body.rows %}<tr><td><code>{{ r.name }}</code></td><td>{{ r.type }}</td><td>{% if r.required %}<span class="req">{{ tt('Pflicht', 'required') }}</span>{% endif %}</td><td>{{ r.description }}</td></tr>{% endfor %}
+        </tbody></table></div>
+        {% endif %}
+        <h4>{{ tt('Beispiel', 'Example') }}</h4>
+        <div class="codetabs"><div class="tabbar"><span class="tab-label">curl</span><button type="button" class="copy" data-copy>{{ tt('Kopieren', 'Copy') }}</button></div><div class="panel"><pre><code>{{ item.curl }}</code></pre></div></div>
+        <h4>{{ tt('Antworten', 'Responses') }}</h4>
+        <ul class="resp">
+          {% for r in item.responses %}<li><span class="st st-{{ r.status[0] }}">{{ r.status }}</span> {{ r.description }}{% if r.schema %} <code>{{ r.schema }}</code>{% endif %}</li>{% endfor %}
+        </ul>
+        {% for r in item.responses if r.example %}
+        <div class="codetabs"><div class="tabbar"><span class="tab-label">{{ r.status }} {{ tt('Antwort', 'response') }}</span><button type="button" class="copy" data-copy>{{ tt('Kopieren', 'Copy') }}</button></div><div class="panel"><pre><code>{{ r.example }}</code></pre></div></div>
+        {% endfor %}
+      </div>
+    </details>
+    {% endfor %}
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

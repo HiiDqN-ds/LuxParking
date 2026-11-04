@@ -1,0 +1,20 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Brand and domain - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">🎨</span> {{ _('Brand & domain') }}</h1><p class="muted">{{ _('These settings are used on tenant-hosted public pages.') }}</p></div></div>
+<section class="panel">
+  <form method="post" class="form" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+    <div class="field logo-field"><label for="logo_file">{{ _('Logo for invoices and key tags') }}</label>
+      {% if tenant.logo_data %}<img class="logo-preview" src="{{ url_for('admin.brand_logo') }}" alt="{{ _('Current logo') }}" width="96" height="96">{% endif %}
+      <input id="logo_file" name="logo_file" type="file" accept="image/png,image/jpeg,image/webp">
+      <small class="muted">{{ _('PNG, JPEG or WebP up to 1 MB. It is printed on every invoice and key tag. A square logo works best.') }}</small>
+      {% if tenant.logo_data %}<label class="check"><input type="checkbox" name="remove_logo" value="1"><span>{{ _('Remove the current logo') }}</span></label>{% endif %}</div>
+    {% for field in (form.logo_url, form.primary_color, form.accent_color, form.custom_domain) %}
+    <div class="field">{{ field.label }}{{ field() }}{% for error in field.errors %}<small class="err">{{ _(error) }}</small>{% endfor %}</div>
+    {% endfor %}
+    <p class="muted">{{ _('A custom domain is saved as tenant configuration only. Configure DNS, TLS, and host routing with your deployment provider before using it.') }}</p>
+    <button class="btn btn-primary">{{ _('Save brand settings') }}</button>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('%(p0)s - ParkPilot', p0=(_('Edit tenant') if tenant else _('New tenant'))) }}{% endblock %}
+{% block content %}
+<div class="head"><div><p class="eyebrow">{{ _('Platform administration') }}</p><h1>{{ tenant.name if tenant else _('New tenant') }}</h1></div>
+  <a class="btn btn-quiet" href="{{ url_for('admin.dashboard') }}">{{ _('Back to overview') }}</a></div>
+{% if stats %}<p class="muted">{{ _('%(p0)s lot(s), %(p1)s booking(s).', p0=(stats.lots), p1=(stats.bookings)) }}</p>{% endif %}
+<section class="panel">
+<form method="post" class="form" action="{{ url_for('admin.platform_tenant_update', tenant_id=tenant.id) if tenant else url_for('admin.platform_tenant_new') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="row2">
+    <label>{{ _('Name') }}<input name="name" value="{{ values.get('name', '') }}" required maxlength="120"></label>
+    <label>{{ _('Slug') }}<input name="slug" value="{{ values.get('slug', '') }}" maxlength="80" placeholder="{{ _('auto from name') }}"></label>
+  </div>
+  <div class="row2">
+    <label>{{ _('Status') }}<select name="status">{% for s in statuses %}<option value="{{ s }}" {{ 'selected' if values.get('status') == s }}>{{ s|title|tr }}</option>{% endfor %}</select></label>
+    <label>{{ _('Language') }}<select name="default_locale">{% for l in locales %}<option value="{{ l }}" {{ 'selected' if values.get('default_locale') == l }}>{{ l }}</option>{% endfor %}</select></label>
+  </div>
+  <div class="row2">
+    <label>{{ _('Time zone') }}<input name="timezone" value="{{ values.get('timezone', 'Europe/Berlin') }}" required></label>
+    <label>{{ _('Currency') }}<input name="currency" value="{{ values.get('currency', 'EUR') }}" maxlength="3" required></label>
+  </div>
+  <label>{{ _('Custom domain (optional)') }}<input name="custom_domain" value="{{ values.get('custom_domain') or '' }}" placeholder="booking.example.com"></label>
+  {% if not tenant %}
+  <h2>{{ _('First owner login') }}</h2>
+  <div class="row2">
+    <label>{{ _('Owner name') }}<input name="owner_name" value="{{ owner.get('name', '') }}"></label>
+    <label>{{ _('Owner email') }}<input type="email" name="owner_email" value="{{ owner.get('email', '') }}" required></label>
+  </div>
+  <label>{{ _('Owner password (12+ characters)') }}<input type="password" name="owner_password" minlength="12" required autocomplete="new-password"></label>
+  {% endif %}
+  <p class="actions"><button class="btn btn-primary">{{ _('Save changes') if tenant else _('Create tenant') }}</button></p>
+</form>
+</section>
+{% if tenant %}
+<section class="panel"><h2>{{ _('Accounts') }}</h2>
+  {% if users %}<div class="table-wrap"><table><thead><tr><th>{{ _('Email') }}</th><th>{{ _('Name') }}</th><th>{{ _('Role') }}</th></tr></thead>
+  <tbody>{% for u in users %}<tr><td>{{ u.email }}</td><td>{{ u.name }}</td><td>{{ u.role|title|tr }}</td></tr>{% endfor %}</tbody></table></div>
+  {% else %}<div class="empty">{{ _('No accounts.') }}</div>{% endif %}
+</section>
+<section class="panel"><h2>{{ _('Delete tenant') }}</h2>
+  <p class="muted">{{ _('Deletes the tenant with its lots, spaces, prices, accounts and API keys. Tenants with bookings cannot be deleted; suspend them instead.') }}</p>
+  <form method="post" class="form" action="{{ url_for('admin.platform_tenant_delete', tenant_id=tenant.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>{{ _('Type') }} <b>{{ tenant.slug }}</b> {{ _('to confirm') }}<input name="confirm_slug" autocomplete="off" required></label>
+    <p class="actions"><button class="btn btn-danger">{{ _('Delete tenant') }}</button></p>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "developers/base.html" %}
+{% from "developers/_code.html" import tabs, block with context %}
+{% block dev_title %}Webhooks{% endblock %}
+{% block content %}
+<article class="dev-prose">
+  <h1>Webhooks</h1>
+  <p class="lead">{{ tt('Lassen Sie sich benachrichtigen, statt abzufragen: ParkPilot sendet Ereignisse als signierte HTTPS-POST-Anfragen an Ihre URL.', 'Get notified instead of polling: ParkPilot sends events as signed HTTPS POST requests to your URL.') }}</p>
+
+  <h2>{{ tt('Einrichten', 'Set up') }}</h2>
+  <p>{{ tt('Über <code>POST /v1/webhooks</code> oder im Admin unter <em>API &amp; Webhooks</em>. Das <code>signing_secret</code> wird nur einmal angezeigt. Ihre URL muss öffentlich per HTTPS erreichbar sein (keine internen oder privaten Adressen; Weiterleitungen werden nicht verfolgt).', 'Via <code>POST /v1/webhooks</code> or in the admin under <em>API &amp; webhooks</em>. The <code>signing_secret</code> is shown once. Your URL must be publicly reachable over HTTPS (no internal or private addresses; redirects are not followed).') }}</p>
+
+  <h2>{{ tt('Ereignisse', 'Events') }}</h2>
+  <div class="dev-table-wrap"><table class="dev-table"><thead><tr><th>type</th><th>{{ tt('Wann', 'When') }}</th></tr></thead><tbody>
+    {% set meaning = {
+      'booking.created': ('Eine Buchung wurde angelegt.', 'A booking was created.'),
+      'booking.paid': ('Die Zahlung der Buchung ist eingegangen.', 'The payment for the booking was received.'),
+      'booking.cancelled': ('Die Buchung wurde storniert.', 'The booking was cancelled.'),
+      'booking.checked_in': ('Das Fahrzeug wurde angenommen.', 'The vehicle was checked in.'),
+      'booking.checked_out': ('Das Fahrzeug wurde zurückgegeben.', 'The vehicle was checked out.'),
+      'inspection.completed': ('Ein Übergabeprotokoll wurde abgeschlossen.', 'An inspection was completed.'),
+      'dispute.opened': ('Eine Zahlung wurde beim Zahlungsanbieter angefochten.', 'A payment was disputed at the payment provider.')} %}
+    {% for e in events %}<tr><td><code>{{ e }}</code></td><td>{{ tt(*meaning.get(e, ('', ''))) }}</td></tr>{% endfor %}
+  </tbody></table></div>
+
+  <h2>{{ tt('Aufbau einer Zustellung', 'Anatomy of a delivery') }}</h2>
+  {{ block('POST /hooks/parkpilot HTTP/1.1\nContent-Type: application/json\nUser-Agent: ParkPilot-Webhooks/1.0\nX-ParkPilot-Event: booking.created\nX-ParkPilot-Delivery: 9f2c1d7a5b8e4c3fa1d0e6b7c8a9f012\nX-ParkPilot-Signature: sha256=3f1c…e9\n\n{"id":"9f2c1d7a5b8e4c3fa1d0e6b7c8a9f012","type":"booking.created","created_at":"2026-12-01T10:00:00+00:00","data":{"booking_id":41,"booking_ref":"PP-7K2M9Q","status":"reserved"}}', 'HTTP') }}
+  <p>{{ tt('Der Body enthält nur die Kerndaten. Rufen Sie bei Bedarf <code>GET /v1/bookings/{id}</code> ab, um den vollständigen, aktuellen Stand zu erhalten.', 'The body carries the essentials. Call <code>GET /v1/bookings/{id}</code> when you need the full, current state.') }}</p>
+
+  <h2>{{ tt('Signatur prüfen', 'Verify the signature') }}</h2>
+  <p>{{ tt('Die Signatur ist <code>sha256=</code> plus der HMAC-SHA256 des <b>unveränderten Request-Bodys</b> mit Ihrem Signing-Secret. Vergleichen Sie zeitkonstant und lehnen Sie Abweichungen mit 401 ab.', 'The signature is <code>sha256=</code> plus the HMAC-SHA256 of the <b>unchanged request body</b> with your signing secret. Compare in constant time and reject mismatches with 401.') }}</p>
+  {{ tabs('verify', hook) }}
+
+  <h2>{{ tt('Wiederholung bei Fehlern', 'Retries') }}</h2>
+  <p>{{ tt('Antworten Sie mit einem 2xx innerhalb von 5 Sekunden. Sonst wird die Zustellung wiederholt, insgesamt 8 Versuche:', 'Answer with a 2xx within 5 seconds. Otherwise the delivery is retried, 8 attempts in total:') }}</p>
+  <ol class="retry">{% for d in delays %}<li>{{ tt('Versuch', 'attempt') }} {{ loop.index }} → {{ tt('nächster nach', 'next after') }} {{ (d // 60) ~ ' min' if d >= 60 else d ~ ' s' }}</li>{% endfor %}<li>{{ tt('Versuch 8 → Status <code>failed</code>', 'attempt 8 → status <code>failed</code>') }}</li></ol>
+  <p>{{ tt('Den Verlauf sehen Sie mit <code>GET /v1/webhook-deliveries</code>.', 'See the history with <code>GET /v1/webhook-deliveries</code>.') }}</p>
+
+  <h2>{{ tt('Empfehlungen', 'Best practices') }}</h2>
+  <ul>
+    <li>{{ tt('<b>Idempotent verarbeiten:</b> Zustellung ist „mindestens einmal“. Merken Sie sich die Event-<code>id</code> und ignorieren Sie Duplikate.', '<b>Process idempotently:</b> delivery is at-least-once. Remember the event <code>id</code> and ignore duplicates.') }}</li>
+    <li>{{ tt('<b>Schnell antworten</b> und schwere Arbeit in eine Warteschlange legen.', '<b>Answer fast</b> and put heavy work in a queue.') }}</li>
+    <li>{{ tt('<b>Reihenfolge nicht annehmen:</b> Ereignisse können vertauscht eintreffen. Prüfen Sie den Status per API.', '<b>Do not assume order:</b> events can arrive out of order. Check the state via the API.') }}</li>
+    <li>{{ tt('<b>Secret rotieren</b> mit <code>POST /v1/webhooks/{id}/rotate-secret</code>: erst den Empfänger aktualisieren, dann fehlgeschlagene Zustellungen nachholen.', '<b>Rotate the secret</b> with <code>POST /v1/webhooks/{id}/rotate-secret</code>: update your receiver first, then catch up failed deliveries.') }}</li>
+  </ul>
+</article>
+{% endblock %}

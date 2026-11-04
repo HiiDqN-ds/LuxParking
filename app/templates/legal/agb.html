@@ -1,0 +1,23 @@
+{% extends "legal/_base.html" %}
+{% block title %}Allgemeine Geschäftsbedingungen{% endblock %}
+{% block content %}
+<h1>Allgemeine Geschäftsbedingungen (AGB)</h1>
+<p>Anbieter: {{ v(legal.company) }}, {{ v(legal.street) }}, {{ v(legal.city) }}. Diese AGB gelten für alle Buchungen von Parkplätzen über diese Website.</p>
+<h2>1. Vertragsgegenstand</h2>
+<p>Wir überlassen Ihnen für den gebuchten Zeitraum einen Stellplatz für ein Kraftfahrzeug. Eine Bewachung, Verwahrung oder Obhut des Fahrzeugs ist nicht geschuldet, soweit sie nicht ausdrücklich zugesagt wurde.</p>
+<h2>2. Buchung und Vertragsschluss</h2>
+<p>Die Auswahl eines Stellplatzes reserviert diesen für zehn Minuten (temporäre Reservierung). In dieser Zeit entsteht noch kein Vertrag und es wird keine Zahlung eingezogen. Der Vertrag kommt zustande, wenn Sie Ihre Angaben absenden und auf „Buchung bestätigen“ klicken und wir die Buchung bestätigen. Die Bestätigung mit Buchungsnummer und QR-Code erhalten Sie auf der Buchungsseite und, sofern E-Mail-Versand eingerichtet ist, per E-Mail. Sie sind verpflichtet, richtige Kontakt- und Fahrzeugdaten anzugeben.</p>
+<h2>3. Preise und Zahlung</h2>
+<p>Es gilt der bei der Buchung angezeigte Gesamtpreis in Euro einschließlich der gesetzlichen Umsatzsteuer, soweit nicht anders angegeben. Die Zahlung erfolgt wahlweise per Karte über den Zahlungsdienstleister Stripe oder, wenn angeboten, bei Ankunft. Bei Kartenzahlung wird die Buchung erst nach erfolgreicher Zahlung als bezahlt geführt.</p>
+<h2>4. Stornierung</h2>
+<p>Sie können Ihre Buchung bis 48 Stunden vor Beginn der Parkzeit kostenlos über den Link auf Ihrer Buchungsseite stornieren; bereits gezahlte Beträge werden über den Zahlungsdienstleister erstattet. Danach ist die Buchung nicht mehr erstattungsfähig. Gesetzliche Rechte, die nicht ausgeschlossen werden können, bleiben unberührt.</p>
+<h2>5. Nutzung des Stellplatzes</h2>
+<p>Das Fahrzeug ist ordnungsgemäß zugelassen und verkehrssicher abzustellen. Gefährliche Stoffe dürfen nicht gelagert werden. Wir dürfen widerrechtlich oder falsch abgestellte Fahrzeuge auf Ihre Kosten entfernen lassen. Bei Überschreitung der gebuchten Zeit können wir den Mehrbedarf nach dem jeweils gültigen Tarif berechnen.</p>
+<h2>6. Fahrzeugzustand und Dokumentation</h2>
+<p>Bei Übergabe und Rückgabe kann der Zustand des Fahrzeugs durch unser Personal mit Fotos und Unterschrift dokumentiert werden. Erkennbare Schäden sind unverzüglich bei Rückgabe zu melden.</p>
+<h2>7. Haftung</h2>
+<p>Wir haften unbeschränkt für Vorsatz und grobe Fahrlässigkeit, für Schäden aus der Verletzung von Leben, Körper oder Gesundheit sowie nach dem Produkthaftungsgesetz. Bei leichter Fahrlässigkeit haften wir nur bei Verletzung wesentlicher Vertragspflichten und beschränkt auf den vorhersehbaren, vertragstypischen Schaden. Im Übrigen ist die Haftung ausgeschlossen.</p>
+<h2>8. Schlussbestimmungen</h2>
+<p>Es gilt deutsches Recht unter Ausschluss des UN-Kaufrechts; zwingende Verbraucherschutzvorschriften des Staates, in dem Sie Ihren gewöhnlichen Aufenthalt haben, bleiben unberührt. Sollten einzelne Bestimmungen unwirksam sein, bleibt der Rest wirksam.</p>
+<p class="fine-print">Hinweis: Dies ist eine Vorlage und ersetzt keine Rechtsberatung. Vor allem Haftung und Widerrufsrecht sollten Sie vor dem Livegang juristisch prüfen lassen.</p>
+{% endblock %}

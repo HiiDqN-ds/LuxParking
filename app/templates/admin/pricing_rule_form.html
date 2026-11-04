@@ -1,0 +1,16 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Edit pricing rule - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><h1>{{ _('Edit pricing rule') }}</h1><a class="btn" href="{{ url_for('admin.pricing_rules') }}">{{ _('Back to pricing') }}</a></div>
+<section class="panel">
+  <form method="post" class="form">
+    {{ form.hidden_tag() }}
+    {% for field in (form.name, form.lot_id, form.space_id, form.period, form.mode, form.amount, form.start_day, form.end_day, form.priority, form.notes) %}
+    <div class="field">{{ field.label }}{{ field() }}{% for error in field.errors %}<small class="err">{{ _(error) }}</small>{% endfor %}</div>
+    {% endfor %}
+    <label class="check">{{ form.active() }} {{ form.active.label.text }}</label>
+    <p class="muted">{{ _('The highest-priority applicable rule sets the total for the entire stay. Date-window rules require both dates.') }}</p>
+    <button class="btn btn-primary">{{ _('Save rule') }}</button>
+  </form>
+</section>
+{% endblock %}

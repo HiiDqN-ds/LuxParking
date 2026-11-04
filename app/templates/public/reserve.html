@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% from "public/_icons.html" import icon %}
+{% block body_class %}booking-page{% endblock %}
+{% block body %}
+<main id="main" class="booking-shell" data-stage="dates" data-view="list" data-selected="false"
+      data-availability-url="{{ url_for('public.localized_availability', locale=locale, tenant_slug=tenant.slug, lot_slug=lot.slug) }}"
+      data-tenant-slug="{{ tenant.slug }}"
+      data-lot-slug="{{ lot.slug }}"
+      data-locale="{{ locale }}"
+      data-messages="{{ booking_messages|tojson|forceescape }}"
+      data-pickup-utc="{{ pickup_utc }}"
+      data-return-utc="{{ return_utc }}">
+  <div class="flow-band">
+    <div class="flow-inner">
+      {% with show_links = true %}{% include "public/_topbar.html" %}{% endwith %}
+      <div class="flow-hero">
+        <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span>{{ t(locale, 'booking.eyebrow') }}</p>
+        <h1>{{ t(locale, 'booking.heading') }}</h1>
+        <p class="lead">{{ t(locale, 'booking.intro') }}</p>
+      </div>
+      {% with step = 1 %}{% include "public/_steps.html" %}{% endwith %}
+    </div>
+  </div>
+
+  <div class="flow-inner flow-body">
+    {% include "public/_flashes.html" %}
+    <div class="reserve-grid">
+      <div class="reserve-main">
+        <section class="panel date-panel" id="date-panel" aria-labelledby="dates-heading">
+          <div class="date-intro">
+            <h2 id="dates-heading">{{ t(locale, 'booking.dates') }}</h2>
+          </div>
+          <div class="date-fields">
+            <div class="row2">
+              <div class="field">
+                <label for="pickup-at">{{ t(locale, 'booking.pickup') }}</label>
+                <input id="pickup-at" type="datetime-local" required>
+              </div>
+              <div class="field">
+                <label for="return-at">{{ t(locale, 'booking.return') }}</label>
+                <input id="return-at" type="datetime-local" required>
+              </div>
+            </div>
+          </div>
+          <div class="quick" role="group" aria-label="{{ t(locale, 'booking.quick') }}">
+            <span class="muted">{{ t(locale, 'booking.quick') }}</span>
+            {% for n in (2, 3, 7, 14) %}<button class="chip" type="button" data-days="{{ n }}" aria-pressed="false">{{ t(locale, 'ticket.days', n=n) }}</button>{% endfor %}
+          </div>
+          <p class="live-status" id="availability-message" role="status" aria-live="polite">{{ t(locale, 'booking.loading') }}</p>
+          <button class="btn btn-primary btn-lg full-width search-spaces" type="button" id="search-spaces" disabled>{{ t(locale, 'booking.search') }}</button>
+          <ul class="trust-list trust-inline date-trust">
+            <li>{{ icon('refund') }}{{ t(locale, 'flow.trust.cancel') }}</li>
+            <li>{{ icon('shield') }}{{ t(locale, 'flow.trust.nopay') }}</li>
+            <li>{{ icon('live') }}{{ t(locale, 'flow.trust.live') }}</li>
+          </ul>
+          <div class="date-summary">
+            <span class="date-summary-text" id="date-summary-text">–</span>
+            <button class="btn btn-quiet" type="button" id="change-dates">{{ t(locale, 'booking.change') }}</button>
+          </div>
+        </section>
+
+        <section class="panel spaces-panel" aria-labelledby="spaces-heading">
+          <div class="section-heading">
+            <div>
+              <h2 id="spaces-heading" tabindex="-1">{{ t(locale, 'booking.spaces') }}</h2>
+              <p class="muted" id="space-count">{{ t(locale, 'booking.space_count', count=spaces|length) }}</p>
+            </div>
+            <div class="view-toggle" role="group" aria-label="{{ t(locale, 'booking.map') }}">
+              <button type="button" id="view-list" aria-pressed="true">{{ t(locale, 'booking.view_list') }}</button>
+              <button type="button" id="view-map" aria-pressed="false">{{ t(locale, 'booking.view_map') }}</button>
+            </div>
+          </div>
+
+          <div class="list-pane">
+            <div class="list-tools">
+              <div class="filter-chips" role="group" aria-label="{{ t(locale, 'booking.spaces') }}">
+                <button class="filter-chip" type="button" id="filter-covered" aria-pressed="false">{{ t(locale, 'booking.covered') }}</button>
+                <button class="filter-chip" type="button" id="filter-ev" aria-pressed="false">{{ t(locale, 'booking.ev') }}</button>
+              </div>
+              <button class="btn btn-quiet" type="button" id="best-available" disabled>{{ t(locale, 'booking.best') }}</button>
+            </div>
+            <ul class="space-skeleton" id="space-skeleton" aria-hidden="true" hidden>
+              {% for _ in range(3) %}<li class="skeleton-card"><i class="sk sk-thumb"></i><span><i class="sk sk-line"></i><i class="sk sk-line short"></i></span><i class="sk sk-price"></i></li>{% endfor %}
+            </ul>
+          <ul class="space-list" id="space-list">
+            {% for space in spaces %}
+            <li class="space-card{% if not space.selectable %} is-disabled{% endif %}"
+                data-space-id="{{ space.id }}"
+                data-selectable="{{ 'true' if space.selectable else 'false' }}"
+                data-price="{{ space.price or '' }}">
+              <button class="space-card-button" type="button" {% if not space.selectable %}disabled{% endif %}>
+                {% if space.photo_url %}<img class="space-thumb" src="{{ space.photo_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% else %}<span class="space-thumb space-thumb-tile" aria-hidden="true">{{ space.name }}</span>{% endif %}
+                <span class="space-card-copy">
+                  <strong>{{ t(locale, 'booking.space', name=space.name) }}</strong>
+                  <span class="chips">
+                    <span class="chip">{{ t(locale, 'booking.kind.' + space.kind) }}</span>
+                    <span class="chip">{% if space.covered %}{{ t(locale, 'booking.covered') }}{% else %}{{ t(locale, 'booking.open_air') }}{% endif %}</span>
+                    {% if space.ev_charging %}<span class="chip chip-ev">{{ t(locale, 'booking.ev') }}</span>{% endif %}
+                  </span>
+                  <span class="space-meta">{{ icon('bus') }}{% if space.bus_distance_m is not none %}{{ t(locale, 'booking.shuttle_distance', distance=space.bus_distance_m) }}{% else %}{{ t(locale, 'booking.shuttle_unknown') }}{% endif %}</span>
+                </span>
+                <span class="space-price"{% if space.price is not none %} data-local-money data-amount="{{ space.price }}" data-currency="{{ space.currency }}"{% endif %}>{% if space.price is not none %}{{ space.price }} {{ space.currency }}{% else %}{{ t(locale, 'booking.price_missing') }}{% endif %}</span>
+              </button>
+              {% if space.status == 'soon' %}<small class="availability-note" data-available-from="{{ space.available_from }}">{{ t(locale, 'booking.available_from', time=space.available_from) }}</small>{% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+          <button class="btn show-all" type="button" id="show-all" hidden></button>
+            <div class="empty" id="no-spaces" {% if spaces %}hidden{% endif %}>{{ t(locale, 'booking.none_free' if has_spaces else 'booking.none_configured') }}</div>
+          </div>
+
+          <div class="map-pane">
+            <p class="muted">{{ t(locale, 'booking.map.help') }}</p>
+            <div class="map-top">
+              <ul class="legend" aria-label="{{ t(locale, 'booking.legend') }}">
+                <li><i class="sw s-available"></i>{{ t(locale, 'booking.available') }}</li>
+                <li><i class="sw s-optional"></i>{{ t(locale, 'booking.optional') }}</li>
+              </ul>
+              <div class="map-controls" aria-label="{{ t(locale, 'booking.zoom') }}">
+                <button class="btn" type="button" id="zoom-out" aria-label="{{ t(locale, 'booking.zoom.out') }}">−</button>
+                <button class="btn" type="button" id="zoom-in" aria-label="{{ t(locale, 'booking.zoom.in') }}">+</button>
+              </div>
+            </div>
+            <div class="map-wrap map-viewport">
+            <svg class="lotmap booking-map" id="booking-map" viewBox="0 0 {{ lot.canvas_w }} {{ lot.canvas_h }}"
+                 role="group" aria-label="{{ t(locale, 'booking.select_map') }}">
+              <rect width="{{ lot.canvas_w }}" height="{{ lot.canvas_h }}" class="lotbg"/>
+              {% if lot.background_url and (lot.background_url.startswith('https://') or (lot.background_url.startswith('/') and not lot.background_url.startswith('//'))) %}
+              <image class="lot-background-image" href="{{ lot.background_url }}"
+                     x="0" y="0" width="{{ lot.canvas_w }}" height="{{ lot.canvas_h }}"
+                     preserveAspectRatio="xMidYMid slice" aria-hidden="true"/>
+              {% endif %}
+              {% for space in spaces %}
+              <g class="map-space s-{{ space.status }}"
+                 data-space-id="{{ space.id }}"
+                 data-selectable="{{ 'true' if space.selectable else 'false' }}"
+                 role="button"
+                 tabindex="{{ '0' if space.selectable else '-1' }}"
+                 aria-disabled="{{ 'false' if space.selectable else 'true' }}"
+                 aria-pressed="false"
+                 aria-label="{{ t(locale, 'booking.space', name=space.name) }}, {{ t(locale, 'booking.' + space.status) }}">
+                <rect x="{{ space.x }}" y="{{ space.y }}" width="{{ space.width }}" height="{{ space.height }}" rx="8"/>
+                <text x="{{ space.x + space.width / 2 }}" y="{{ space.y + space.height / 2 }}"
+                      text-anchor="middle" dominant-baseline="middle">{{ space.name }}</text>
+                {% if space.ev_charging %}<text class="tag" x="{{ space.x + space.width - 8 }}" y="{{ space.y + 16 }}" text-anchor="end">EV</text>{% endif %}
+                {% if space.covered %}<text class="tag" x="{{ space.x + 8 }}" y="{{ space.y + 16 }}">C</text>{% endif %}
+              </g>
+              {% endfor %}
+            </svg>
+          </div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="panel selection-panel" id="selection-panel" aria-labelledby="selection-heading">
+        <h2 id="selection-heading">{{ t(locale, 'booking.selection') }}</h2>
+        <dl class="trip-summary">
+          <div><dt>{{ t(locale, 'hold.pickup') }}</dt><dd id="trip-pickup">–</dd></div>
+          <div><dt>{{ t(locale, 'hold.return') }}</dt><dd id="trip-return">–</dd></div>
+          <div><dt>{{ t(locale, 'booking.duration') }}</dt><dd id="trip-duration">–</dd></div>
+        </dl>
+        <p class="muted" id="selection-message">{{ t(locale, 'booking.choose_continue') }}</p>
+        <div class="selection-details" id="selection-details" hidden>
+          <strong id="selected-space-name"></strong>
+          <span id="selected-space-type"></span>
+          <span id="selected-space-distance"></span>
+          <span class="selection-total" id="selected-space-price"></span>
+        </div>
+        <form method="post" id="hold-form" action="{{ url_for('public.localized_reserve_space', locale=locale, tenant_slug=tenant.slug, lot_slug=lot.slug) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="space_id" id="selected-space-id">
+          <input type="hidden" name="pickup_at" id="pickup-at-utc">
+          <input type="hidden" name="return_at" id="return-at-utc">
+          <div class="field">
+            <label for="customer-email">{{ t(locale, 'booking.email') }}</label>
+            <input type="email" id="customer-email" name="email" autocomplete="email" maxlength="255" required>
+          </div>
+          <button class="btn btn-primary btn-lg full-width" type="submit" id="hold-submit" disabled>{{ t(locale, 'booking.hold') }}</button>
+        </form>
+        <p class="fine-print">{{ t(locale, 'booking.hold_note') }}</p>
+        <ul class="trust-list">
+          <li>{{ icon('refund') }}{{ t(locale, 'flow.trust.cancel') }}</li>
+          <li>{{ icon('shield') }}{{ t(locale, 'flow.trust.nopay') }}</li>
+          <li>{{ icon('live') }}{{ t(locale, 'flow.trust.live') }}</li>
+        </ul>
+      </aside>
+    </div>
+
+    <section class="home-faq" aria-labelledby="booking-faq-title">
+      <h2 id="booking-faq-title">{{ t(locale, 'home.faq.title') }}</h2>
+      <details>
+        <summary>{{ t(locale, 'faq.hold.question') }}</summary>
+        <p>{{ t(locale, 'faq.hold.answer') }}</p>
+      </details>
+    </section>
+  </div>
+
+  <div class="sticky-cta" id="sticky-cta" hidden>
+    <div class="sticky-cta-copy"><strong id="sticky-name"></strong><span id="sticky-price"></span></div>
+    <button class="btn btn-primary" type="button" id="sticky-go">{{ t(locale, 'booking.review') }}</button>
+  </div>
+</main>
+{% include "public/_footer.html" %}
+{% include "public/_chat.html" %}
+<script src="{{ url_for('static', filename='vendor/socket.io.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/booking.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/booking-extras.js') }}" defer></script>
+{% endblock %}

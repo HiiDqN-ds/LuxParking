@@ -1,0 +1,236 @@
+{% extends "staff/base.html" %}
+{% block title %}{{ _('%(p0)s inspection - %(p1)s', p0=(phase|title|tr), p1=(booking.booking_ref)) }}{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('staff.booking_detail', booking_id=booking.id) }}">{{ _('← Booking %(p0)s', p0=(booking.booking_ref)) }}</a></p>
+<div class="staff-heading">
+  <div><p class="eyebrow">{{ _('%(p0)s vehicle inspection', p0=(phase|title|tr)) }}</p>
+    <h1>{% if is_staff %}{{ booking.vehicle.plate if booking.vehicle else _("Vehicle arriving") }}{% else %}{{ booking.customer.first_name }} {{ booking.customer.last_name }}{% endif %}</h1>
+    <p class="muted">{{ _('%(p0)s · Booking %(p1)s', p0=(booking.vehicle.plate if booking.vehicle else _("Vehicle plate not provided")), p1=(booking.booking_ref)) }}</p></div>
+  {% if inspection %}<span class="badge s-{{ inspection.status }}">{{ inspection.status.replace("_", " ")|title|tr }}</span>{% endif %}
+</div>
+{% if not inspection %}
+<section class="panel">
+  <p>{{ _('Start the inspection before taking vehicle photos or signing.') }}</p>
+  <form method="post" action="{{ url_for('staff.start_inspection', booking_id=booking.id, phase=phase) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-primary">{{ _('Begin %(p0)s inspection', p0=(phase)) }}</button>
+  </form>
+</section>
+{% else %}
+<div class="capture-progress" id="capture-progress"
+     data-photo-categories='{{ required_photos|tojson }}'
+     data-completed-categories='{{ inspection.photos|map(attribute="category")|list|tojson }}'>
+  <span id="capture-count">{{ _('Evidence photos: %(p0)s', p0=(inspection.photos|length)) }}</span>
+  <span id="upload-queue-count" aria-live="polite">{{ _('Offline queue: 0') }}</span>
+</div>
+{% if phase == "departure" and arrival_photos %}
+<section class="panel" aria-labelledby="before-after-heading">
+  <h2 id="before-after-heading">{{ _('Arrival and departure photos') }}</h2>
+  <p class="muted">{{ _('Compare each view before marking damage as new.') }}</p>
+  <div class="before-after-grid">
+    {% for category in required_photos %}
+      {% set before = arrival_photos|selectattr("category", "equalto", category)|first %}
+      {% set after = inspection.photos|selectattr("category", "equalto", category)|first %}
+      <article class="before-after-card">
+        <h3>{{ photo_labels.get(category, category.replace("_", " ")|title)|tr }}</h3>
+        <div class="before-after-pair">
+          <div><span>{{ _('Arrival') }}</span>
+            {% if before %}<a href="{{ url_for('staff.photo', photo_id=before.id) }}"><img src="{{ url_for('staff.photo', photo_id=before.id) }}" alt="{{ _('%(p0)s at arrival', p0=(category)) }}" loading="lazy"></a>{% else %}<p>{{ _('Not recorded') }}</p>{% endif %}
+          </div>
+          <div><span>{{ _('Departure') }}</span>
+            {% if after %}<a href="{{ url_for('staff.photo', photo_id=after.id) }}"><img src="{{ url_for('staff.photo', photo_id=after.id) }}" alt="{{ _('%(p0)s at departure', p0=(category)) }}" loading="lazy"></a>{% else %}<p>{{ _('Not captured yet') }}</p>{% endif %}
+          </div>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% if inspection.status != "completed" %}
+<section class="panel guided" id="guided-capture" aria-labelledby="guided-title" hidden>
+  <p class="eyebrow" id="guided-step"></p>
+  <h2 id="guided-title"></h2>
+  <p class="muted" id="guided-hint"></p>
+  <progress id="guided-progress" value="0" max="12" aria-label="{{ _('Photo progress') }}"></progress>
+  <label class="btn btn-primary btn-lg guided-btn">{{ _('Take photo') }}<input type="file" accept="image/*" capture="environment" hidden></label>
+  <p class="muted" id="guided-status" role="status" aria-live="polite"></p>
+</section>
+<section class="panel" aria-labelledby="photo-heading">
+  <h2 id="photo-heading">{{ _('Required vehicle photos') }}</h2>
+  <p class="muted">{{ _('Take clear, well-lit photos. Each photo is compressed on this device and saved the moment you take it.') }}</p>
+  <div class="evidence-grid">
+    {% for category in required_photos %}
+    {% set existing = inspection.photos|selectattr("category", "equalto", category)|first %}
+    <form class="evidence-form" method="post" enctype="multipart/form-data"
+          action="{{ url_for('staff.upload_photo', inspection_id=inspection.id) }}" data-evidence-form>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="category" value="{{ category }}">
+      <input type="hidden" name="captured_at" value="">
+      <label class="evidence-label">
+        <span>{{ photo_labels.get(category, category.replace("_", " ")|title)|tr }}</span>
+        {% if existing %}
+          <span class="evidence-done">{{ _('Captured · %(p0)s', p0=(existing.staff_name)) }}</span>
+          <a class="evidence-preview" href="{{ url_for('staff.photo', photo_id=existing.id) }}">{{ _('View photo') }}</a>
+        {% else %}
+          <input type="file" name="photo" accept="image/*" capture="environment" required>
+          <button class="btn" type="submit">{{ _('Capture and upload') }}</button>
+          <span class="upload-state" aria-live="polite"></span>
+        {% endif %}
+      </label>
+    </form>
+    {% endfor %}
+    {% set signature = inspection.photos|selectattr("category", "equalto", "signature")|first %}
+    {% if signature %}
+      <div class="evidence-label"><span>{{ _('Customer signature') }}</span><span class="evidence-done">{{ _('Signed · %(p0)s', p0=(signature.staff_name)) }}</span>
+        <a class="evidence-preview" href="{{ url_for('staff.photo', photo_id=signature.id) }}">{{ _('View signature') }}</a></div>
+    {% else %}
+      <div class="signature-panel">
+        <label for="customer-signature"><strong>{{ _('Customer signature (required)') }}</strong></label>
+        <canvas id="customer-signature" width="720" height="220" aria-label="{{ _('Sign inside this box') }}"
+                data-upload-url="{{ url_for('staff.upload_photo', inspection_id=inspection.id) }}" data-csrf="{{ csrf_token() }}"></canvas>
+        <p class="muted">{{ _('The signature saves automatically when the customer lifts the pen.') }}</p>
+        <div class="actions">
+          <button class="btn" type="button" id="clear-signature">{{ _('Clear signature') }}</button>
+        </div>
+        <span class="upload-state" id="signature-state" aria-live="polite"></span>
+      </div>
+    {% endif %}
+  </div>
+</section>
+<section class="panel" aria-labelledby="damage-heading">
+  <h2 id="damage-heading">{{ _('Vehicle damage') }}</h2>
+  {% if phase == "departure" and arrival_marks %}
+    <p class="muted">{{ _('Select the matching arrival mark for pre-existing damage. Any unlinked departure mark opens a dispute.') }}</p>
+  {% else %}
+    <p class="muted">{{ _('Mark and photograph every damage area. If none exist, confirm that explicitly below.') }}</p>
+  {% endif %}
+  <div class="vehicle-diagram-wrap">
+    <svg id="vehicle-diagram" viewBox="0 0 100 100" role="img" aria-label="{{ _('Top-down vehicle diagram') }}">
+      <path class="vehicle-outline" d="M35 5 Q25 8 24 20 L20 34 L20 72 Q20 88 35 94 L65 94 Q80 88 80 72 L80 34 L76 20 Q75 8 65 5 Z"/>
+      <rect class="vehicle-glass" x="28" y="25" width="44" height="22" rx="5"/>
+      <rect class="vehicle-glass" x="28" y="59" width="44" height="16" rx="4"/>
+      {% for mark in inspection.damage_marks %}
+        <circle class="damage-dot" cx="{{ mark.x_percent }}" cy="{{ mark.y_percent }}" r="3">
+          <title>{{ mark.kind }} damage</title>
+        </circle>
+      {% endfor %}
+    </svg>
+    <p class="muted" id="diagram-hint" aria-live="polite">{{ _('Tap the vehicle to set the location for the next damage mark.') }}</p>
+  </div>
+  {% if inspection.damage_marks %}
+  <ul class="damage-list">
+    {% for mark in inspection.damage_marks %}
+    <li><strong>{{ mark.kind.replace("_", " ")|title|tr }}</strong> · {{ mark.notes or _("No note") }}
+      {% if mark.matched_damage_id %}<span class="evidence-done">{{ _('Matched to arrival mark') }}</span>{% endif %}
+      {% if mark.photo_id %}<a href="{{ url_for('staff.photo', photo_id=mark.photo_id) }}">{{ _('View photo') }}</a>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if inspection.status != "completed" %}
+  <form class="damage-form evidence-form" method="post" enctype="multipart/form-data"
+        action="{{ url_for('staff.create_damage_mark', inspection_id=inspection.id) }}" data-evidence-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="captured_at" value="">
+    <div class="row2">
+      <label class="field">{{ _('X position (0–100)') }}<input type="number" name="x" min="0" max="100" value="50" required></label>
+      <label class="field">{{ _('Y position (0–100)') }}<input type="number" name="y" min="0" max="100" value="50" required></label>
+    </div>
+    <label class="field">{{ _('Damage type') }}
+      <select name="kind">{% for kind in damage_kinds %}<option value="{{ kind }}">{{ kind.replace("_", " ")|title|tr }}</option>{% endfor %}</select>
+    </label>
+    {% if phase == "departure" and arrival_marks %}
+    <label class="field">{{ _('Pre-existing arrival damage (leave unselected for new damage)') }}
+      <select name="matched_damage_id"><option value="">{{ _('New damage') }}</option>
+        {% for mark in arrival_marks %}
+        <option value="{{ mark.id }}">{{ _('%(p0)s · %(p1)s · mark %(p2)s', p0=(mark.kind|title|tr), p1=(mark.notes or _("No note")), p2=(mark.id)) }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% endif %}
+    <label class="field">{{ _('Notes') }} <textarea name="notes" maxlength="1000"></textarea></label>
+    <label class="field">{{ _('Damage photo') }}<input type="file" name="photo" accept="image/*" capture="environment" required></label>
+    <button class="btn" type="submit" data-manual-save>{{ _('Save damage mark and photo') }}</button>
+    <span class="upload-state" aria-live="polite"></span>
+  </form>
+  {% endif %}
+</section>
+<section class="panel" aria-labelledby="details-heading">
+  <h2 id="details-heading">{{ _('Vehicle and handover details') }}</h2>
+  {% if inspection.status == "completed" %}
+  <dl class="inspection-details">
+    <div><dt>{{ _('Fuel') }}</dt><dd>{{ inspection.fuel_level }}%</dd></div>
+    <div><dt>{{ _('Odometer') }}</dt><dd>{{ _('%(p0)s km', p0=(inspection.odometer_km)) }}</dd></div>
+    <div><dt>{{ _('Keys') }}</dt><dd>{{ inspection.key_count }}</dd></div>
+    <div><dt>{{ _('Belongings') }}</dt><dd>{{ inspection.belongings or _("None recorded") }}</dd></div>
+    <div><dt>{{ _('Notes') }}</dt><dd>{{ inspection.notes or _("None") }}</dd></div>
+  </dl>
+  <p>{{ _('Report email: %(p0)s', p0=(inspection.report_sent_at.strftime("%Y-%m-%d %H:%M UTC") if inspection.report_sent_at else _("Not sent"))) }}</p>
+  {% if not inspection.report_sent_at %}
+  <form method="post" action="{{ url_for('staff.retry_report', inspection_id=inspection.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn">{{ _('Retry PDF report email') }}</button>
+  </form>
+  {% endif %}
+  {% else %}
+  <form class="inspection-complete-form" method="post" action="{{ url_for('staff.finish_inspection', inspection_id=inspection.id) }}"
+        data-draft-url="{{ url_for('staff.save_draft', inspection_id=inspection.id) }}" data-inspection-id="{{ inspection.id }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="then" value="next">
+    <p class="autosave-note"><span class="autosave-dot" aria-hidden="true"></span>{{ _('Everything saves as you go. Only the last button is needed.') }}
+      <span id="draft-state" class="muted" aria-live="polite"></span></p>
+    {% if phase == "arrival" %}
+    <fieldset class="vehicle-profile-fields">
+      <legend>{{ _('Vehicle profile') }}</legend>
+      <div class="row2">
+        <label class="field">{{ _('Registration plate') }}
+          <input name="vehicle_plate" maxlength="30" autocomplete="off" value="{{ draft.get('vehicle_plate', booking.vehicle.plate if booking.vehicle else '') }}">
+        </label>
+        <label class="field">{{ _('Make') }}
+          <input name="vehicle_make" maxlength="60" value="{{ draft.get('vehicle_make', booking.vehicle.make if booking.vehicle else '') }}">
+        </label>
+        <label class="field">{{ _('Model') }}
+          <input name="vehicle_model" maxlength="60" value="{{ draft.get('vehicle_model', booking.vehicle.model if booking.vehicle else '') }}">
+        </label>
+        <label class="field">{{ _('Color') }}
+          <input name="vehicle_color" maxlength="40" value="{{ draft.get('vehicle_color', booking.vehicle.color if booking.vehicle else '') }}">
+        </label>
+      </div>
+    </fieldset>
+    {% endif %}
+    <div class="row2">
+      <label class="field">{{ _('Fuel level (%)') }}<input type="number" name="fuel_level" min="0" max="100" value="{{ draft.get('fuel_level', '50') }}" required></label>
+      <label class="field">{{ _('Odometer (km)') }}<input type="number" name="odometer_km" min="0" step="1" value="{{ draft.get('odometer_km', '') }}" required></label>
+      <label class="field">{{ _('Keys received') }}<input type="number" name="key_count" min="0" step="1" value="{{ draft.get('key_count', '1') }}" required></label>
+    </div>
+    <label class="field">{{ _('Belongings inside the vehicle') }}<textarea name="belongings" maxlength="2000">{{ draft.get('belongings', '') }}</textarea></label>
+    <label class="field">{{ _('Notes') }}<textarea name="notes" maxlength="2000">{{ draft.get('notes', '') }}</textarea></label>
+    <label class="check no-damage-check"><input type="checkbox" name="no_damage_confirmed" value="yes" {% if draft.get('no_damage_confirmed') == 'yes' %}checked{% endif %}> {{ _('I confirm there is no damage to record') }}</label>
+    <ul class="complete-checklist" id="complete-checklist" data-missing="{{ _('Still missing: %(p0)s', p0='{items}') }}" data-marks="{{ mark_count }}">
+      <li data-key="photos" class="{{ 'is-done' if required_done >= required_total }}">{{ _('Vehicle photos: %(p0)s of %(p1)s', p0=required_done, p1=required_total) }}</li>
+      <li data-key="signature" class="{{ 'is-done' if has_signature }}">{{ _('Customer signature') }}</li>
+      <li data-key="odometer" class="{{ 'is-done' if draft.get('odometer_km') }}">{{ _('Odometer (km)') }}</li>
+      <li data-key="damage" class="{{ 'is-done' if (mark_count and draft.get('no_damage_confirmed') != 'yes') or (not mark_count and draft.get('no_damage_confirmed') == 'yes') }}">{{ _('Damage declaration') }}</li>
+    </ul>
+    <p class="muted" id="complete-missing" aria-live="polite"></p>
+    <p class="muted" id="offline-status" role="status" aria-live="polite"></p>
+    <button class="btn btn-primary btn-lg" id="complete-button">{{ _('Complete and check in') if phase == "arrival" else _('Complete and check out') }}</button>
+  </form>
+  {% endif %}
+</section>
+{% else %}
+<section class="panel">
+  <h2>{{ _('Inspection report') }}</h2>
+  <p class="evidence-done">{{ _('This inspection is complete. Its evidence and customer signature are locked.') }}</p>
+  {% if inspection.phase == "departure" and arrival_marks %}
+    <h3>{{ _('Arrival damage comparison') }}</h3>
+    <ul class="damage-list">
+      {% for mark in arrival_marks %}
+      <li>{{ mark.kind|title|tr }} · {{ mark.notes or _("No note") }} · {{ _("Matched") if mark.id in inspection.damage_marks|map(attribute="matched_damage_id")|list else _("No matching departure mark") }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}

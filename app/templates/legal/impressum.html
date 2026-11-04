@@ -1,0 +1,15 @@
+{% extends "legal/_base.html" %}
+{% block title %}Impressum{% endblock %}
+{% block content %}
+<h1>Impressum</h1>
+<h2>Angaben gemäß § 5 DDG</h2>
+<p>{{ v(legal.company) }}<br>{{ v(legal.street) }}<br>{{ v(legal.city) }}</p>
+<p>Vertreten durch: {{ v(legal.representative) }}</p>
+<h2>Kontakt</h2>
+<p>E-Mail: {{ v(legal.email) }}<br>Telefon: {{ v(legal.phone) }}</p>
+<h2>Register und Umsatzsteuer</h2>
+<p>Registereintrag: {{ v(legal.register) }}<br>Umsatzsteuer-Identifikationsnummer gemäß § 27a UStG: {{ v(legal.vat_id) }}</p>
+<h2>Verbraucherstreitbeilegung</h2>
+<p>Wir sind weder bereit noch verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.</p>
+<p class="fine-print">Hinweis: Dies ist eine Vorlage und ersetzt keine Rechtsberatung. Bitte lassen Sie die Angaben vor dem Livegang prüfen.</p>
+{% endblock %}

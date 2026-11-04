@@ -1,0 +1,60 @@
+{% extends "staff/base.html" %}
+{% block title %}{{ _('Staff bookings - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="staff-heading">
+  <div><p class="eyebrow">{{ _('Employee workspace') }}</p><h1>{{ _('Booking lookup') }}</h1>
+    <p class="muted">{% if current_user.role == "staff" %}{{ _('Scan a QR code or enter a booking number to view an incoming or currently parked vehicle.') }}{% else %}{{ _('Scan a signed booking QR code or enter a booking number.') }}{% endif %}</p></div>
+  {% if current_user.role == "owner" %}<a class="btn btn-primary" href="{{ url_for('staff.walk_in_hold') }}">{{ _('Create walk-in hold') }}</a>{% endif %}
+</div>
+<section class="panel">
+  <form class="staff-lookup" method="post" action="{{ url_for('staff.lookup') }}" id="booking-lookup">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="field" for="booking-code">{{ _('Booking number or QR link') }}
+      <input id="booking-code" name="booking_code" autocomplete="off" required>
+    </label>
+    <button class="btn btn-primary">{{ _('Find booking') }}</button>
+  </form>
+  <div class="scanner">
+    <button class="btn" type="button" id="start-scan">{{ _('Scan booking QR') }}</button>
+    <button class="btn btn-quiet" type="button" id="stop-scan" hidden>{{ _('Stop camera') }}</button>
+    <video id="qr-camera" playsinline muted hidden aria-label="{{ _('Booking QR camera') }}"></video>
+    <p class="muted" id="scan-message" role="status" aria-live="polite"></p>
+  </div>
+</section>
+{% if tasks %}
+<section class="panel" aria-labelledby="task-heading">
+  <h2 id="task-heading">{{ _('Open extras (%(p0)s)', p0=(tasks|length)) }}</h2>
+  <ul class="task-list">
+    {% for t in tasks %}
+    <li><span class="badge s-{{ 'optional' if t.kind == 'shuttle' else 'active' }}">{{ t.kind|title|tr }}</span>
+      <a href="{{ url_for('staff.booking_detail', booking_id=t.booking_id) }}"><strong>{{ t.name }}</strong> · {{ t.booking.booking_ref }}{% if t.booking.vehicle %} · {{ t.booking.vehicle.plate }}{% endif %}</a>
+      <small class="muted">{{ t.booking.pickup_at.strftime("%d.%m %H:%M") }}{% if t.details %} · {{ t.details }}{% endif %}</small></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+<section class="panel" aria-labelledby="active-bookings">
+  <h2 id="active-bookings">{% if current_user.role == "staff" %}{{ _('Incoming and parked vehicles') }}{% else %}{{ _('Current bookings') }}{% endif %}</h2>
+  {% if bookings %}
+  <div class="table-wrap staff-table">
+    <table>
+      <thead><tr><th>{{ _('Booking') }}</th>{% if current_user.role == "owner" %}<th>{{ _('Customer') }}</th>{% endif %}<th>{{ _('Vehicle') }}</th><th>{{ _('Pick-up') }}</th><th>{{ _('Status') }}</th><th></th></tr></thead>
+      <tbody>
+      {% for booking in bookings %}
+        <tr>
+          <td>{{ booking.booking_ref }}</td>
+          {% if current_user.role == "owner" %}<td>{{ booking.customer.first_name }} {{ booking.customer.last_name }}</td>{% endif %}
+          <td>{{ booking.vehicle.plate if booking.vehicle else "—" }}</td>
+          <td>{{ booking.pickup_at.strftime("%Y-%m-%d %H:%M") }}</td>
+          <td>{{ booking.status.replace("_", " ")|title|tr }}</td>
+          <td><a class="btn" href="{{ url_for('staff.booking_detail', booking_id=booking.id) }}">{{ _('Open') }}</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty">{% if current_user.role == "staff" %}{{ _('No incoming or currently parked vehicles are available for staff.') }}{% else %}{{ _('No active bookings are waiting for the team.') }}{% endif %}</p>
+  {% endif %}
+</section>
+{% endblock %}

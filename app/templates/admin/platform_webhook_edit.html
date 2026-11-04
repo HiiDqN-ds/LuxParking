@@ -1,0 +1,18 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Edit webhook - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">🔔</span> {{ _('Edit webhook') }}</h1><p class="muted">{{ _('%(p0)s. Use "New secret" on the list to rotate the signing secret.', p0=(tenant_name)) }}</p></div>
+  <a class="btn" href="{{ url_for('admin.platform_api') }}">{{ _('Back') }}</a></div>
+<section class="panel">
+  <form method="post" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field"><label for="we-name">{{ _('Name') }}</label><input id="we-name" name="name" maxlength="100" required value="{{ values.name }}"></div>
+    <div class="field"><label for="we-url">{{ _('HTTPS endpoint URL') }}</label><input id="we-url" type="url" name="url" required value="{{ values.url }}"></div>
+    <fieldset class="pay-choice"><legend>{{ _('Events') }}</legend>
+      {% for e in events %}<label class="pay-option"><input type="checkbox" name="events" value="{{ e }}" {% if e in values.events %}checked{% endif %}><span>{{ e }}</span></label>{% endfor %}
+    </fieldset>
+    <label class="check"><input type="checkbox" name="active" value="1" {% if values.active %}checked{% endif %}> {{ _('Webhook is active') }}</label>
+    <p><button class="btn btn-primary">{{ _('Save webhook') }}</button></p>
+  </form>
+</section>
+{% endblock %}

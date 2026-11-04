@@ -1,0 +1,36 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Pricing rules - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">💶</span> {{ _('Advanced pricing') }}</h1><p class="muted">{{ _('The matching rule with the highest priority prices the whole stay. Ties prefer a space-specific rule, then the oldest rule.') }}</p></div></div>
+<section class="panel">
+  <h2>{{ _('Add a pricing rule') }}</h2>
+  <form method="post" class="form">
+    {{ form.hidden_tag() }}
+    {% for field in (form.name, form.lot_id, form.space_id, form.period, form.mode, form.amount, form.start_day, form.end_day, form.priority, form.notes) %}
+    <div class="field">{{ field.label }}{{ field() }}{% for error in field.errors %}<small class="err">{{ _(error) }}</small>{% endfor %}</div>
+    {% endfor %}
+    <label class="check">{{ form.active() }} {{ form.active.label.text }}</label>
+    <p class="muted">{{ _('Season and holiday rules need both dates. A weekend rule matches if the stay overlaps Saturday or Sunday; holiday dates are entered manually. Rates are tenant-defined. If no rule matches, the space/lot base daily rate applies.') }}</p>
+    <button class="btn btn-primary">{{ _('Add rule') }}</button>
+  </form>
+</section>
+<section class="panel">
+  <h2>{{ _('Configured rules') }}</h2>
+  {% if rules %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>{{ _('Rule') }}</th><th>{{ _('Scope') }}</th><th>{{ _('Pattern') }}</th><th>{{ _('Rate') }}</th><th>{{ _('Priority') }}</th><th>{{ _('Dates') }}</th><th>{{ _('State') }}</th><th></th></tr></thead>
+    <tbody>{% for rule in rules %}
+    <tr>
+      <td>{{ rule.name }}</td><td>{{ rule.lot.name }}{% if rule.space %} · {{ rule.space.name }}{% else %} {{ _('· Entire lot') }}{% endif %}</td>
+      <td>{{ rule.period }}</td><td>{{ rule.amount }} / {{ rule.mode }}</td><td>{{ rule.priority }}</td>
+      <td>{{ rule.start_day or '—' }} – {{ rule.end_day or '—' }}</td><td>{{ _('Active') if rule.active else _('Inactive') }}</td>
+      <td><a href="{{ url_for('admin.pricing_rule_edit', rule_id=rule.id) }}">{{ _('Edit') }}</a>
+        <form method="post" action="{{ url_for('admin.pricing_rule_delete', rule_id=rule.id) }}" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger">{{ _('Delete') }}</button>
+        </form></td>
+    </tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty">{{ _('No custom pricing rules. Base rates remain in effect.') }}</div>{% endif %}
+</section>
+{% endblock %}

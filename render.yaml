@@ -1,0 +1,71 @@
+# Render Blueprint: New > Blueprint > pick the GitHub repo.
+# Plans are set to "free" so nothing is billed by accident. As far as I know, Render's free
+# Postgres expires after 30 days and free web services sleep when idle: upgrade both before
+# taking real bookings.
+databases:
+  - name: parkpilot-db
+    databaseName: parkpilot
+    user: parkpilot
+    plan: free
+
+services:
+  - type: web
+    name: parkpilot
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: bash start.sh
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: APP_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: parkpilot-db
+          property: connectionString
+      - key: SEED_DAY_RATE      # starting price per day; change it later under Admin > Pricing
+        value: "9.90"
+      - key: SITE_URL
+        value: https://luxuryparking.de
+      - key: SEED_TENANT_NAME
+        value: Luxury Parking
+      - key: PUBLIC_TENANT_SLUG
+        value: luxury-parking
+      - key: AUTO_SEED          # creates tenant + 50 spaces on first start; safe to leave on
+        value: "1"
+      - key: SEED_OWNER_EMAIL   # you set these in the Render dashboard
+        sync: false
+      - key: ADMIN_PASSWORD     # at least 12 characters, not a common password (checked at start-up in production)
+        sync: false
+      - key: SESSION_LIFETIME_HOURS
+        value: "12"
+      - key: IDLE_TIMEOUT_MINUTES
+        value: "120"
+      # Shared rate-limit counters across workers. Point at a Redis instance (e.g. Render Key Value) before scaling out.
+      - key: RATELIMIT_STORAGE_URI
+        sync: false
+      # Fill these in the Render dashboard when you are ready; the app starts without them.
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: INSPECTION_S3_BUCKET
+        sync: false
+      - key: INSPECTION_S3_ENDPOINT_URL
+        sync: false
+      - key: INSPECTION_S3_ACCESS_KEY_ID
+        sync: false
+      - key: INSPECTION_S3_SECRET_ACCESS_KEY
+        sync: false

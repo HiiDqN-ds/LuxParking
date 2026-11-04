@@ -1,0 +1,45 @@
+<!doctype html>
+{% set rtl_langs = ['ar', 'he', 'fa', 'ur'] %}
+{% set page_locale = locale|default(ui_locale()) %}
+<html lang="{{ page_locale }}" dir="{{ 'rtl' if page_locale.split('-')[0] in rtl_langs else 'ltr' }}"{% if tenant and (tenant.primary_color != '#0F4C5C' or tenant.accent_color != '#E09F1F') %} style="--brand: {{ tenant.primary_color }}; --accent: {{ tenant.accent_color }}"{% endif %}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}{{ seo.title if seo else 'ParkPilot' }}{% endblock %}</title>
+  <meta name="description" content="{% block description %}{{ seo.description if seo else _('Airport parking, booked in under a minute.') }}{% endblock %}">
+  {% if seo %}
+  <link rel="canonical" href="{{ seo.canonical }}">
+  {% for alternate in seo.alternates %}
+  <link rel="alternate" hreflang="{{ alternate.language }}" href="{{ alternate.url }}">
+  {% endfor %}
+  <meta property="og:title" content="{{ seo.title }}">
+  <meta property="og:description" content="{{ seo.description }}">
+  <meta property="og:url" content="{{ seo.canonical }}">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="{{ seo.og_locale }}">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="{{ seo.title }}">
+  <meta name="twitter:description" content="{{ seo.description }}">
+  {% if seo.robots %}<meta name="robots" content="{{ seo.robots }}">{% endif %}
+  {% if seo.structured_data %}
+  <script type="application/ld+json" nonce="{{ csp_nonce() }}">{{ seo.structured_data|tojson }}</script>
+  {% endif %}
+  {% endif %}
+  {% block seo %}{% endblock %}
+  <meta name="color-scheme" content="light dark">
+  {% if biz and biz.logo_enabled %}
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
+  <meta name="theme-color" content="#07131F">
+  <meta property="og:image" content="{{ url_for('static', filename='img/luxury-parking-stacked-dark.png', _external=True) }}">
+  {% endif %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  {% block head_extra %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  <a class="skip" href="#main">{{ _('Skip to content') }}</a>
+  {% block body %}{% endblock %}
+  <script defer src="{{ url_for('static', filename='js/ui-actions.js') }}"></script>
+</body>
+</html>

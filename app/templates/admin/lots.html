@@ -1,0 +1,16 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Lots - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><h1><span class="h-ico" aria-hidden="true">🅿️</span> {{ _('Lots') }}</h1>{% if current_user.is_owner %}<a class="btn btn-primary" href="{{ url_for('admin.lot_new') }}">{{ _('New lot') }}</a>{% endif %}</div>
+{% if not lots %}<div class="empty"><p>{{ _('No lots yet.') }}</p></div>{% else %}
+<div class="table-wrap"><table>
+  <thead><tr><th>{{ _('Name') }}</th><th>{{ _('City') }}</th><th>{{ _('Spaces') }}</th><th>{{ _('Active') }}</th><th></th></tr></thead>
+  <tbody>{% for lot in lots %}
+    <tr><td><a href="{{ url_for('admin.layout', lot_id=lot.id) }}">{{ lot.name }}</a></td><td>{{ lot.city }}</td>
+      <td>{{ counts.get(lot.id, 0) }}</td><td>{{ _('Yes') if lot.active else _('No') }}</td>
+      <td class="right"><a class="btn" href="{{ url_for('admin.spaces', lot_id=lot.id) }}">{{ _('Spaces') }}</a> {% if current_user.is_owner %}<a class="btn" href="{{ url_for('admin.lot_edit', lot_id=lot.id) }}">{{ _('Edit') }}</a>
+        <form method="post" class="inline" action="{{ url_for('admin.lot_delete', lot_id=lot.id) }}" data-confirm="{{ _('Delete lot %(p0)s and all of its spaces? This cannot be undone.', p0=(lot.name)) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger">{{ _('Delete') }}</button></form>{% endif %}</td></tr>
+  {% endfor %}</tbody>
+</table></div>{% endif %}
+{% endblock %}

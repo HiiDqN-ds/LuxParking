@@ -1,0 +1,2 @@
+{# avatar(user, size): the profile photo, or the first letter of the name on a coloured circle. sizes: sm, md, lg, xl #}
+{% macro avatar(user, size='md') %}{% if user.avatar_updated_at %}<img class="avatar avatar-{{ size }}" src="{{ url_for('auth.avatar', user_id=user.id, v=user.avatar_updated_at.timestamp()|int) }}" alt="" loading="lazy" decoding="async">{% else %}<span class="avatar avatar-{{ size }}" aria-hidden="true">{{ (user.name or user.email)[:1]|upper }}</span>{% endif %}{% endmacro %}

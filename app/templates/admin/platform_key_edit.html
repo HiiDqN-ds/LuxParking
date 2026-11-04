@@ -1,0 +1,26 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Edit API key - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">🔑</span> {{ _('Edit API key') }}</h1><p class="muted">{{ tenant_name }} · <code>{{ key.prefix }}</code> {{ _('· %(p0)s key. The secret itself cannot be changed; create a new key to rotate it.', p0=(_('Public') if key.key_type == 'pk' else _('Secret'))) }}</p></div>
+  <a class="btn" href="{{ url_for('admin.platform_api') }}">{{ _('Back') }}</a></div>
+<section class="panel">
+  <form method="post" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row2">
+      <div class="field"><label for="ke-name">{{ _('Name') }}</label><input id="ke-name" name="name" maxlength="100" required value="{{ values.name }}"></div>
+      <div class="field"><label for="ke-rpm">{{ _('Requests per minute') }}</label><input id="ke-rpm" name="requests_per_minute" type="number" min="1" max="10000" required value="{{ values.requests_per_minute }}"></div>
+    </div>
+    <div class="field"><label for="ke-origins">{{ _('Allowed origins (comma separated, HTTPS)') }}</label><input id="ke-origins" name="allowed_origins" value="{{ values.allowed_origins }}"></div>
+    <fieldset class="pay-choice"><legend>{{ _('Permissions') }}</legend>
+      {% for scope in scope_choices %}<label class="pay-option"><input type="checkbox" name="scopes" value="{{ scope }}" {% if scope in values.scopes %}checked{% endif %}><span>{{ scope }}</span></label>{% endfor %}
+    </fieldset>
+    <fieldset class="pay-choice"><legend>{{ _('Maps this key may use') }}</legend>
+      <input type="hidden" name="lots_present" value="1">
+      {% for lot in tenant_lots %}<label class="pay-option"><input type="checkbox" name="lot_ids" value="{{ lot.id }}" {% if lot.id in selected_lots %}checked{% endif %}><span>{{ lot.name }}</span></label>{% endfor %}
+    </fieldset>
+    <p class="muted">{{ _('Monthly price (calculated when you save):') }} <strong>{{ "%.2f"|format(key.monthly_price or 0) }} EUR</strong></p>
+    <label class="check"><input type="checkbox" name="active" value="1" {% if values.active %}checked{% endif %}> {{ _('Key is active') }}</label>
+    <p><button class="btn btn-primary">{{ _('Save key') }}</button></p>
+  </form>
+</section>
+{% endblock %}

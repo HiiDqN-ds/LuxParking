@@ -1,0 +1,31 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Plan & billing - ParkPilot') }}{% endblock %}
+{% macro meter(label, used, limit) %}<div class="meter"><div class="meter-head"><span>{{ label }}</span><strong>{{ used }}{% if limit %} / {{ limit }}{% else %} {{ _('· unlimited') }}{% endif %}</strong></div>
+  {% if limit %}<progress max="{{ limit }}" value="{{ [used, limit]|min }}" aria-label="{{ label }}"></progress>{% endif %}</div>{% endmacro %}
+{% block content %}
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">💳</span> {{ _('Plan & billing') }}</h1>
+<p class="muted">{{ _('Your ParkPilot subscription. Invoices for the subscription come from Stripe by email.') }}</p></div></div>
+{% if request.args.get('subscribed') %}<div class="flash ok">{{ _('Thank you! Your subscription is being activated; this page updates within a minute.') }}</div>{% endif %}
+<section class="panel">
+  {% if state.exempt %}<h2>{{ _('No subscription needed') }}</h2><p>{{ _('This parking is operated by the platform owner and has no plan limits.') }}</p>
+  {% else %}
+  <h2>{{ plans|selectattr('key','equalto',state.plan_key)|map(attribute='label')|first }} · {{ state.status|replace('_',' ')|title|tr }}</h2>
+  {% if state.status == 'trialing' %}<p>{{ _('Free trial:') }} <strong>{{ state.trial_days_left }}</strong> {{ _('day(s) left.') }}</p>{% endif %}
+  {% if state.period_end and state.status in ('active','past_due','cancelled') %}<p class="muted">{% if state.cancel_at_period_end or state.status == 'cancelled' %}{{ _('Access ends') }}{% else %}{{ _('Renews') }}{% endif %} {{ _('on %(p0)s.', p0=(state.period_end.strftime('%Y-%m-%d'))) }}</p>{% endif %}
+  {% if state.reason %}<div class="flash error" role="alert">{{ state.reason }}</div>{% endif %}
+  {{ meter(_('Spaces'), usage.spaces, state.limits.spaces) }}
+  {{ meter(_('Bookings this month'), usage.bookings, state.limits.bookings) }}
+  {{ meter(_('API requests this month'), usage.api_requests, state.limits.api_requests) }}
+  {% if sub and sub.stripe_customer_id %}<form method="post" action="{{ url_for('billing.portal') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn">{{ _('Manage billing (card, invoices, cancel)') }}</button></form>{% endif %}
+  {% endif %}
+</section>
+{% if not state.exempt %}
+<section class="panel"><h2>{{ _('Plans') }}</h2>
+  {% if not stripe_ready %}<p class="muted">{{ _('Online subscription is not enabled on this platform yet. Contact the platform owner to choose a plan.') }}</p>{% endif %}
+  <div class="cards">{% for p in plans %}<div class="card"><h3>{{ p.label }}</h3>
+    <ul><li>{{ _('%(p0)s spaces', p0=(p.limits.spaces or _('Unlimited'))) }}</li><li>{{ _('%(p0)s bookings / month', p0=(p.limits.bookings or _('Unlimited'))) }}</li><li>{{ _('%(p0)s API requests / month', p0=(p.limits.api_requests or _('Unlimited'))) }}</li></ul>
+    {% if p.current %}<span class="badge">{{ _('Current plan') }}</span>
+    {% elif p.buyable and stripe_ready %}<form method="post" action="{{ url_for('billing.subscribe', plan_key=p.key) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-primary">{{ _('Change to') if sub and sub.stripe_subscription_id else _('Choose') }} {{ p.label }}</button></form>
+    {% else %}<span class="muted">{{ _('Not available yet') }}</span>{% endif %}</div>{% endfor %}</div>
+</section>{% endif %}
+{% endblock %}

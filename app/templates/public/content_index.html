@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block body %}
+<main id="main" class="content-page">
+  <header class="content-header">
+    <a class="brand" href="{{ url_for('public.localized_home', locale=locale) }}">
+      {% if tenant.logo_url and tenant.logo_url.startswith('https://') %}<img class="tenant-logo" src="{{ tenant.logo_url }}" alt="{{ tenant.name }}" loading="eager">{% else %}{{ tenant.name }}{% endif %}
+    </a>
+    <nav class="language-switcher" aria-label="{{ t(locale, 'language.label') }}">
+      {% for language in language_links %}
+      <a href="{{ language.url }}" hreflang="{{ language.code }}" lang="{{ language.code }}">{{ language.label }}</a>
+      {% endfor %}
+    </nav>
+  </header>
+  <h1>{{ t(locale, 'content.' + kind) }}</h1>
+  {% if entries %}
+    {% for entry in entries %}
+    <article class="content-card">
+      <h2><a href="{{ url_for('public.localized_content_page', locale=locale, tenant_slug=tenant.slug, kind=kind, slug=entry.slug) }}">{{ entry.title }}</a></h2>
+      {% if entry.summary %}<p class="muted">{{ entry.summary }}</p>{% endif %}
+      {% if kind == 'faq' %}<p class="content-body">{{ entry.body }}</p>{% endif %}
+    </article>
+    {% endfor %}
+  {% else %}<div class="empty">{{ t(locale, 'content.empty') }}</div>{% endif %}
+  {% if lot %}<p><a class="btn btn-primary" href="{{ url_for('public.localized_reserve', locale=locale, tenant_slug=tenant.slug, lot_slug=lot.slug) }}">{{ t(locale, 'home.book') }}</a></p>{% endif %}
+</main>
+{% endblock %}

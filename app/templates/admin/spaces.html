@@ -1,0 +1,37 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import status_badge %}
+{% block title %}{{ _('Spaces - %(p0)s', p0=(lot.name)) }}{% endblock %}
+{% block content %}
+<div class="head">
+  <div><h1><span class="h-ico" aria-hidden="true">🅿️</span> {{ _('Spaces') }}</h1><p class="muted">{{ _('%(p0)s · %(p1)s shown', p0=(lot.name), p1=(spaces|length)) }}</p></div>
+  <p class="actions"><a class="btn" href="{{ url_for('admin.layout', lot_id=lot.id) }}">{{ _('Map view') }}</a>
+  {% if current_user.is_owner %}<a class="btn btn-primary" href="{{ url_for('admin.space_new', lot_id=lot.id) }}">{{ _('Add space') }}</a>{% endif %}</p>
+</div>
+<form method="get" class="filters">
+  <label>{{ _('Search') }} <input type="search" name="q" value="{{ term }}" placeholder="{{ _('e.g. B4') }}"></label>
+  <label>{{ _('Status') }} <select name="status"><option value="">{{ _('All') }}</option>
+    {% for k, v in status_labels.items() %}<option value="{{ k }}" {{ 'selected' if k == status }}>{{ v }}</option>{% endfor %}</select></label>
+  <button class="btn">{{ _('Filter') }}</button>
+</form>
+{% if current_user.is_owner and spaces %}
+<form method="post" id="bulk" action="{{ url_for('admin.spaces_bulk', lot_id=lot.id) }}" class="filters">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <strong>{{ _('Set for selected spaces:') }}</strong>
+  <label>{{ _('Covered') }} <select name="covered"><option value="">{{ _('No change') }}</option><option value="1">{{ _('Covered') }}</option><option value="0">{{ _('Not covered') }}</option></select></label>
+  <label>{{ _('EV charging') }} <select name="ev_charging"><option value="">{{ _('No change') }}</option><option value="1">{{ _('Has charger') }}</option><option value="0">{{ _('No charger') }}</option></select></label>
+  <label>{{ _('Size') }} <select name="kind"><option value="">{{ _('No change') }}</option>{% for k, v in kind_labels.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label>
+  <label>{{ _('Status') }} <select name="status"><option value="">{{ _('No change') }}</option>{% for k, v in status_labels.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label>
+  <button class="btn btn-primary">{{ _('Apply') }}</button>
+</form>
+{% endif %}
+{% if not spaces %}<div class="empty"><p>{{ _('No spaces match.') }} {% if current_user.is_owner %}{{ _('Add one or clear the filter.') }}{% endif %}</p></div>{% else %}
+<div class="table-wrap"><table>
+  <thead><tr>{% if current_user.is_owner %}<th><input type="checkbox" aria-label="{{ _('Select all') }}" data-select-all="space_ids"></th>{% endif %}<th>{{ _('Name') }}</th><th>{{ _('Size') }}</th><th>{{ _('Covered') }}</th><th>EV</th><th>{{ _('To shuttle') }}</th><th>{{ _('Status') }}</th><th></th></tr></thead>
+  <tbody>{% for s in spaces %}
+    <tr>{% if current_user.is_owner %}<td><input type="checkbox" name="space_ids" value="{{ s.id }}" form="bulk" aria-label="{{ _('Select %(p0)s', p0=(s.name)) }}"></td>{% endif %}<td><strong>{{ s.name }}</strong></td><td>{{ kind_labels[s.kind]|tr }}</td><td>{{ _('Yes') if s.covered else '-' }}</td>
+      <td>{{ _('Yes') if s.ev_charging else '-' }}</td><td>{{ (s.bus_distance_m ~ ' m') if s.bus_distance_m is not none else '-' }}</td>
+      <td>{{ status_badge(s.status, status_labels) }}</td>
+      <td class="right">{% if current_user.is_owner %}<a href="{{ url_for('admin.space_edit', space_id=s.id) }}">{{ _('Edit') }}</a>{% endif %}</td></tr>
+  {% endfor %}</tbody>
+</table></div>{% endif %}
+{% endblock %}

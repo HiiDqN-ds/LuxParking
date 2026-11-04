@@ -1,0 +1,33 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Discount codes - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">🏷️</span> {{ _('Discount codes') }}</h1><p class="muted">{{ _('One code may be applied to a booking; discounts cannot be stacked. Choose your own amount and validity.') }}</p></div></div>
+<section class="panel">
+  <h2>{{ _('Create discount') }}</h2>
+  <form method="post" class="form">
+    {{ form.hidden_tag() }}
+    {% for field in (form.code, form.discount_type, form.value, form.starts_on, form.ends_on, form.minimum_amount, form.max_redemptions) %}
+    <div class="field">{{ field.label }}{{ field() }}{% for error in field.errors %}<small class="err">{{ _(error) }}</small>{% endfor %}</div>
+    {% endfor %}
+    <label class="check">{{ form.active() }} {{ form.active.label.text }}</label>
+    <button class="btn btn-primary">{{ _('Create code') }}</button>
+  </form>
+</section>
+<section class="panel">
+  <h2>{{ _('Existing codes') }}</h2>
+  {% if codes %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>{{ _('Code') }}</th><th>{{ _('Discount') }}</th><th>{{ _('Validity') }}</th><th>{{ _('Minimum') }}</th><th>{{ _('Redemptions') }}</th><th>{{ _('State') }}</th><th></th></tr></thead>
+    <tbody>{% for code in codes %}
+    <tr><td><code>{{ code.code }}</code></td><td>{% if code.discount_type == 'percentage' %}{{ code.value }}%{% else %}{{ _('%(p0)s fixed', p0=(code.value)) }}{% endif %}</td>
+      <td>{{ code.starts_on or _('Any date') }} – {{ code.ends_on or _('No end') }}</td><td>{{ code.minimum_amount }}</td>
+      <td>{{ code.redemption_count }}{% if code.max_redemptions %} / {{ code.max_redemptions }}{% else %} {{ _('/ unlimited') }}{% endif %}</td>
+      <td>{{ _('Active') if code.active else _('Inactive') }}</td><td><a href="{{ url_for('admin.discount_edit', code_id=code.id) }}">{{ _('Edit') }}</a>
+        <form method="post" action="{{ url_for('admin.discount_toggle', code_id=code.id) }}" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn">{{ _('Disable') if code.active else _('Enable') }}</button>
+        </form></td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty">{{ _('No discount codes configured.') }}</div>{% endif %}
+</section>
+{% endblock %}

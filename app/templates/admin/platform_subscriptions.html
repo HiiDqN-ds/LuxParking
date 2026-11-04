@@ -1,0 +1,21 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Subscriptions - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">💳</span> {{ _('Subscriptions') }}</h1><p class="muted">{{ _('Plan status of every tenant. Revenue is the recurring amount Stripe reports for active subscriptions.') }}</p></div></div>
+<section class="panel"><h2>{{ _('Overview') }}</h2>
+  <p>{% for s, n in counts.items() %}<span class="badge">{{ s|replace('_',' ')|title|tr }}: {{ n }}</span> {% endfor %}</p>
+  <p><strong>{{ _('Monthly recurring revenue:') }}</strong> {% if mrr %}{% for c, v in mrr.items() %}{{ '%.2f'|format(v) }} {{ c }} {% endfor %}{% else %}<span class="muted">{{ _('none yet') }}</span>{% endif %}</p></section>
+<div class="table-wrap"><table>
+ <thead><tr><th>{{ _('Tenant') }}</th><th>{{ _('Plan') }}</th><th>{{ _('Status') }}</th><th>{{ _('Trial / renewal') }}</th><th>{{ _('Spaces') }}</th><th>{{ _('Bookings (month)') }}</th><th>{{ _('API (month)') }}</th><th></th></tr></thead>
+ <tbody>{% for r in rows %}<tr>
+  <td>{{ r.tenant.name }}<small class="sub">{{ r.tenant.slug }}</small></td>
+  <td>{{ r.state.plan_key|title|tr if not r.state.exempt else '–' }}</td>
+  <td>{{ r.state.status|replace('_',' ')|title|tr }}{% if r.state.blocked %}<small class="sub">{{ _('blocked') }}</small>{% endif %}</td>
+  <td class="nowrap">{% if r.state.status == 'trialing' %}{{ _('%(p0)s day(s) left', p0=(r.state.trial_days_left)) }}{% elif r.state.period_end %}{{ r.state.period_end.strftime('%Y-%m-%d') }}{% else %}–{% endif %}</td>
+  <td>{{ r.usage.spaces }}{% if r.state.limits.spaces %} / {{ r.state.limits.spaces }}{% endif %}</td>
+  <td>{{ r.usage.bookings }}{% if r.state.limits.bookings %} / {{ r.state.limits.bookings }}{% endif %}</td>
+  <td>{{ r.usage.api_requests }}{% if r.state.limits.api_requests %} / {{ r.state.limits.api_requests }}{% endif %}</td>
+  <td class="right"><form method="post" class="inline" action="{{ url_for('billing.platform_subscription_update', tenant_id=r.tenant.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+   {% if r.state.exempt %}<button class="btn" name="action" value="charge">{{ _('Start charging') }}</button>
+   {% else %}<input name="days" type="number" min="1" max="90" value="7" style="width:4.5rem" aria-label="{{ _('Days') }}"><button class="btn" name="action" value="extend_trial">{{ _('Extend trial') }}</button><button class="btn" name="action" value="exempt">{{ _('Exempt') }}</button>{% endif %}</form></td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

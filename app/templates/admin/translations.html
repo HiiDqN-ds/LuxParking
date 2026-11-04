@@ -1,0 +1,26 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Translations - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">🌍</span> {{ _('Translation overrides') }}</h1><p class="muted">{{ _('Overrides apply to existing catalog strings; empty fields do not remove the platform fallback.') }}</p></div></div>
+<section class="panel">
+  <h2>{{ _('Add or update text') }}</h2>
+  <form method="post" class="form">
+    {{ form.hidden_tag() }}
+    {% for field in (form.locale, form.key, form.value) %}
+    <div class="field">{{ field.label }}{{ field() }}{% for error in field.errors %}<small class="err">{{ _(error) }}</small>{% endfor %}</div>
+    {% endfor %}
+    <button class="btn btn-primary">{{ _('Save override') }}</button>
+  </form>
+</section>
+<section class="panel">
+  <h2>{{ _('Current overrides') }}</h2>
+  {% if overrides %}
+  <div class="table-wrap"><table><thead><tr><th>{{ _('Language') }}</th><th>{{ _('Catalog key') }}</th><th>{{ _('Tenant text') }}</th><th></th></tr></thead><tbody>
+    {% for override in overrides %}<tr><td>{{ override.locale }}</td><td><code>{{ override.key }}</code></td><td>{{ override.value }}</td><td>
+      <form method="post" action="{{ url_for('admin.translation_delete', translation_id=override.id) }}" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger">{{ _('Remove') }}</button>
+      </form></td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}<div class="empty">{{ _('No tenant translation overrides.') }}</div>{% endif %}
+</section>
+{% endblock %}

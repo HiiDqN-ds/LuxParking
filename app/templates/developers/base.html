@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon with context %}
+{% block title %}{% block dev_title %}{% endblock %} · ParkPilot {{ tt('Entwickler', 'Developers') }}{% endblock %}
+{% block description %}{{ tt('Die Parkplatz-API für Deutschland: Verfügbarkeit, Preise, Buchung, Rechnung und Webhooks. Dokumentation, Beispiele und Datenschutz.', 'The parking API for Germany: availability, prices, booking, invoices and webhooks. Docs, examples and data protection.') }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', filename='css/developers.css') }}">{% endblock %}
+{% block body_class %}dev{% endblock %}
+{% block body %}
+<header class="dev-top">
+  <a class="dev-brand" href="{{ url_for('developers.index', lang=lang) }}"><span class="dev-logo" aria-hidden="true">P</span><span>ParkPilot <b>{{ tt('Entwickler', 'Developers') }}</b></span></a>
+  <nav class="dev-nav" aria-label="{{ tt('Hauptnavigation', 'Main navigation') }}">
+    <a href="{{ url_for('developers.index', lang=lang) }}"{% if page == 'index' %} aria-current="page"{% endif %}>{{ tt('Überblick', 'Overview') }}</a>
+    <a href="{{ url_for('developers.reference', lang=lang) }}"{% if page == 'reference' %} aria-current="page"{% endif %}>{{ tt('API-Referenz', 'API reference') }}</a>
+    <a href="{{ url_for('developers.webhooks', lang=lang) }}"{% if page == 'webhooks' %} aria-current="page"{% endif %}>Webhooks</a>
+    <a href="{{ url_for('developers.security', lang=lang) }}"{% if page == 'security' %} aria-current="page"{% endif %}>{{ tt('Sicherheit & DSGVO', 'Security & GDPR') }}</a>
+    <a href="{{ url_for('developers.changelog', lang=lang) }}"{% if page == 'changelog' %} aria-current="page"{% endif %}>Changelog</a>
+  </nav>
+  <div class="dev-tools">
+    <span class="dev-lang" role="group" aria-label="{{ tt('Sprache', 'Language') }}"><a href="?lang=de"{% if lang == 'de' %} aria-current="true"{% endif %}>DE</a><a href="?lang=en"{% if lang == 'en' %} aria-current="true"{% endif %}>EN</a></span>
+    <a class="btn btn-primary dev-cta" href="{{ url_for('auth.login') }}">{{ icon('key') }} {{ tt('API-Key anlegen', 'Get an API key') }}</a>
+  </div>
+</header>
+<main id="main" class="dev-main">{% block content %}{% endblock %}</main>
+<footer class="dev-foot">
+  <span>© ParkPilot</span>
+  <a href="{{ url_for('legal.impressum') }}">{{ tt('Impressum', 'Legal notice') }}</a>
+  <a href="{{ url_for('legal.datenschutz') }}">{{ tt('Datenschutz', 'Privacy') }}</a>
+  <a href="{{ url_for('developers.openapi_download') }}">OpenAPI 3.1</a>
+  <a href="{{ url_for('developers.postman') }}">Postman</a>
+</footer>
+<script src="{{ url_for('static', filename='js/developers.js') }}" defer></script>
+{% endblock %}

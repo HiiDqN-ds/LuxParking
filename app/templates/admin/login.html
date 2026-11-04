@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field %}
+{% block title %}{{ _('Sign in - ParkPilot') }}{% endblock %}
+{% block body_class %}login-page{% endblock %}
+{% block body %}
+<canvas id="lot3d" class="login-canvas" data-center aria-hidden="true"></canvas>
+<main id="main" class="login login-3d">
+  <div class="login-wrap">
+    <div class="login-card" data-tilt>
+      <span class="login-glow" aria-hidden="true"></span>
+      <div class="login-lang">{% include "_lang_switch.html" %}</div>
+      <div class="login-brand"><span class="brand-badge login-badge" aria-hidden="true">P</span><span class="login-brand-name">{{ _('ParkPilot') }}</span></div>
+      <h1>{{ _('Sign in to ParkPilot') }}</h1>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}<div class="flash {{ cat }}" role="alert">{{ msg }}</div>{% endfor %}
+      {% endwith %}
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        {{ field(form.email, autocomplete="username", autofocus=True) }}
+        {{ field(form.password, autocomplete="current-password") }}
+        <button class="btn btn-primary login-submit">{{ _('Sign in') }}</button>
+      </form>
+      <p class="login-links"><a href="{{ url_for('auth.forgot_password') }}">{{ _('Forgot your password?') }}</a></p>
+    </div>
+  </div>
+</main>
+<script src="{{ url_for('static', filename='vendor/three.min.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/home-scene.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/login-3d.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,16 @@
+{# Brand logo. Order: tenant's own https logo_url, then the bundled Luxury Parking logo, then plain text.
+   Usage: {% from "public/_logo.html" import brand_logo with context %}{{ brand_logo(tenant, dark=True) }}
+   dark=True is for dark bands (white lettering); dark=False for light surfaces (navy lettering). #}
+{% macro brand_logo(tenant, dark=True, cls="tenant-logo") -%}
+{%- set name = tenant.name if tenant else 'ParkPilot' -%}
+{%- if tenant and tenant.logo_url and tenant.logo_url.startswith('https://') -%}
+<img class="{{ cls }}" src="{{ tenant.logo_url }}" alt="{{ name }}" loading="eager">
+{%- elif biz and biz.logo_enabled -%}
+{%- set alt = biz.name ~ ' – ' ~ biz.city -%}
+{%- if dark -%}
+<img class="{{ cls }} brand-logo" src="{{ url_for('static', filename='img/luxury-parking-logo-dark.svg') }}" alt="{{ alt }}" width="593" height="200" loading="eager">
+{%- else -%}
+<picture><source media="(prefers-color-scheme: dark)" srcset="{{ url_for('static', filename='img/luxury-parking-logo-dark.svg') }}"><img class="{{ cls }} brand-logo" src="{{ url_for('static', filename='img/luxury-parking-logo-light.svg') }}" alt="{{ alt }}" width="593" height="200" loading="eager"></picture>
+{%- endif -%}
+{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro %}

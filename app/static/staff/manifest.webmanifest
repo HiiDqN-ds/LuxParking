@@ -1,0 +1,18 @@
+{
+  "name": "ParkPilot Staff",
+  "short_name": "ParkPilot",
+  "description": "Secure employee booking and vehicle inspection app",
+  "start_url": "/staff/",
+  "scope": "/staff/",
+  "display": "standalone",
+  "background_color": "#F2F4F5",
+  "theme_color": "#07131F",
+  "icons": [
+    {
+      "src": "/static/staff/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

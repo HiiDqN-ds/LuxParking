@@ -1,0 +1,15 @@
+{% extends layout %}
+{% block title %}{{ _('Phone number') }} - ParkPilot{% endblock %}
+{% block content %}
+<div class="head"><div><h1>{{ _('Phone number') }}</h1><p class="muted">{{ current_user.email }}</p></div><a class="btn" href="{{ url_for('auth.change_password') }}">{{ _('Change password') }}</a></div>
+<section class="panel">
+  <form method="post" class="form" autocomplete="off">
+    {{ form.hidden_tag() }}
+    <div class="field">{{ form.phone.label }}{{ form.phone(autocomplete="tel", inputmode="tel") }}
+      {% for error in form.phone.errors %}<small class="err">{{ _(error) }}</small>{% endfor %}
+    </div>
+    <p class="muted">{{ _('This number receives the text code if you forget your password. Leave it empty to remove it.') }}</p>
+    <button class="btn btn-primary">{{ _('Save changes') }}</button>
+  </form>
+</section>
+{% endblock %}

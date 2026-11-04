@@ -1,0 +1,49 @@
+{% extends base %}
+{% block title %}{{ _('Notification centre - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">🔔</span> {{ _('Notification centre') }}</h1>
+  <p class="muted">{{ _('Everything that happens in your parking, live. New bookings play a sound while this page or any page of the app is open.') }}</p></div></div>
+
+<section class="kpis" aria-label="{{ _('Summary') }}">
+  <div class="kpi green"><span class="kpi-ico" aria-hidden="true">🆕</span><strong>{{ stats.today }}</strong><small>{{ _('Bookings today') }}</small></div>
+  <div class="kpi blue"><span class="kpi-ico" aria-hidden="true">🛬</span><strong>{{ stats.arriving }}</strong><small>{{ _('Arriving in the next 24 hours') }}</small></div>
+  <div class="kpi teal"><span class="kpi-ico" aria-hidden="true">🚗</span><strong>{{ stats.parked }}</strong><small>{{ _('Parked now') }}</small></div>
+  <div class="kpi {{ 'red' if stats.disputes else 'gray' }}"><span class="kpi-ico" aria-hidden="true">⚠️</span><strong>{{ stats.disputes }}</strong><small>{{ _('Open disputes') }}</small></div>
+  <div class="kpi orange"><span class="kpi-ico" aria-hidden="true">🔔</span><strong>{{ unread }}</strong><small>{{ _('Unread') }}</small></div>
+</section>
+
+<div class="charts">
+  <section class="panel chart-card"><h2>{{ _('Bookings in the last 14 days') }}</h2>
+    {% if stats.peak %}
+    <svg class="bar-chart" viewBox="0 0 440 150" role="img" aria-label="{{ _('Bar chart: bookings per day in the last 14 days') }}">
+      {% for bar in stats.bars %}{% set h = (bar.height * 0.9)|round(1) %}
+      <g><title>{{ bar.day.strftime('%d.%m.') }}: {{ bar.count }}</title>
+        <rect x="{{ 8 + loop.index0 * 30 }}" y="{{ 112 - h }}" width="22" height="{{ h }}" rx="4" class="bar {{ 'today' if bar.today else '' }}"/>
+        <text x="{{ 19 + loop.index0 * 30 }}" y="{{ 106 - h }}" class="bar-count" text-anchor="middle">{{ bar.count if bar.count else '' }}</text>
+        <text x="{{ 19 + loop.index0 * 30 }}" y="130" class="bar-day" text-anchor="middle">{{ bar.day.day }}</text></g>
+      {% endfor %}
+    </svg>
+    {% else %}<div class="empty">{{ _('No bookings in this period') }}</div>{% endif %}
+  </section>
+  <section class="panel chart-card"><h2>{{ _('Bookings by status') }}</h2>
+    {% if stats.total_bookings %}
+    <div class="donut-wrap">
+      <svg class="donut" viewBox="0 0 42 42" role="img" aria-label="{{ _('Donut chart: bookings by status') }}">
+        <circle cx="21" cy="21" r="15.9155" fill="none" stroke="#e6ebef" stroke-width="6"/>
+        {% for s in stats.slices if s.count %}<circle cx="21" cy="21" r="15.9155" fill="none" stroke="{{ s.colour }}" stroke-width="6" stroke-dasharray="{{ s.length|round(2) }} {{ (100 - s.length)|round(2) }}" stroke-dashoffset="{{ (25 - s.offset)|round(2) }}"><title>{{ s.status|replace('_',' ')|title|tr }}: {{ s.count }}</title></circle>{% endfor %}
+        <text x="21" y="22.5" text-anchor="middle" class="donut-total">{{ stats.total_bookings }}</text>
+      </svg>
+      <ul class="legend-list">{% for s in stats.slices %}<li><span class="dot" style="background:{{ s.colour }}"></span>{{ s.status|replace('_',' ')|title|tr }} <strong>{{ s.count }}</strong></li>{% endfor %}</ul>
+    </div>
+    {% else %}<div class="empty">{{ _('No bookings yet.') }}</div>{% endif %}
+  </section>
+</div>
+
+<section class="panel"><h2>{{ _('Activity') }}</h2>
+  <p class="chips"><a class="chip {{ 'on' if not kind }}" href="{{ url_for('alerts.center') }}">{{ _('All') }}</a>
+    {% for code, icon, name in kinds %}<a class="chip {{ 'on' if kind == code }}" href="{{ url_for('alerts.center', kind=code) }}">{{ icon }} {{ _(name) }}</a>{% endfor %}</p>
+  {% if items %}<ul class="timeline">{% for item in items %}
+    <li class="alert-item {{ item.colour }}"><a href="{{ item.url or '#' }}"><span class="alert-ico" aria-hidden="true">{{ item.icon }}</span><span class="alert-body">{{ item.text }}<small>{{ item.ago }}</small></span></a></li>{% endfor %}</ul>
+  {% else %}<div class="empty">{{ _('No notifications yet.') }}</div>{% endif %}
+</section>
+{% endblock %}

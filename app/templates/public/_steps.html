@@ -1,0 +1,6 @@
+{% set labels = [t(locale, 'booking.dates'), t(locale, 'booking.map'), t(locale, 'checkout.heading'), t(locale, 'checkout.complete_title')] %}
+<ol class="steps" id="flow-steps" aria-label="{{ t(locale, 'checkout.heading') }}">
+  {% for label in labels %}
+  <li{% if loop.index == step %} aria-current="step"{% endif %} class="{{ 'done' if loop.index < step }}"><span class="step-n">{{ loop.index }}</span><span class="step-l">{{ label }}</span></li>
+  {% endfor %}
+</ol>

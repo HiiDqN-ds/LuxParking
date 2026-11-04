@@ -1,0 +1,22 @@
+{% extends "staff/base.html" %}
+{% block title %}{{ _('Open disputes - ParkPilot') }}{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('staff.dashboard') }}">{{ _('← Bookings') }}</a></p>
+<div class="staff-heading"><div><p class="eyebrow">{{ _('Evidence review') }}</p><h1>{{ _('Open damage disputes') }}</h1></div></div>
+{% if disputes %}
+  {% for dispute in disputes %}
+  <article class="panel dispute-panel">
+    <h2>{{ _('Booking %(p0)s', p0=(dispute.booking.booking_ref)) }}</h2>
+    <p>{{ dispute.booking.customer.first_name }} {{ dispute.booking.customer.last_name }} · {{ dispute.booking.vehicle.plate if dispute.booking.vehicle else _("No plate") }}</p>
+    <p><strong>{{ dispute.damage_mark.kind.replace("_", " ")|title|tr }}</strong> · {{ dispute.damage_mark.notes or _("No note") }}</p>
+    <p>{{ _('Location %(p0)s%%, %(p1)s%%', p0=(dispute.damage_mark.x_percent|round|int), p1=(dispute.damage_mark.y_percent|round|int)) }}</p>
+    {% if dispute.damage_mark.photo_id %}
+      <a class="btn" href="{{ url_for('staff.photo', photo_id=dispute.damage_mark.photo_id) }}">{{ _('Open departure damage photo') }}</a>
+    {% endif %}
+    <a class="btn" href="{{ url_for('staff.inspection_page', booking_id=dispute.booking_id, phase='arrival') }}">{{ _('Compare arrival inspection') }}</a>
+  </article>
+  {% endfor %}
+{% else %}
+  <p class="empty">{{ _('There are no open damage disputes.') }}</p>
+{% endif %}
+{% endblock %}

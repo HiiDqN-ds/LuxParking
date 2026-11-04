@@ -1,0 +1,122 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('API & webhooks - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">🔑</span> {{ _('API & webhooks') }}</h1><p class="muted">{{ _('Only you can create, edit and delete keys and webhooks. Secrets are shown once; share them with the owner securely.') }}</p></div><a class="btn" href="{{ url_for('developers.index') }}" target="_blank" rel="noopener">{{ _('API documentation') }}</a></div>
+{% if issued_token or one_time_secret %}
+<section class="panel secret-panel" role="alert">
+  <h2>{{ _('Copy this for %(p0)s now', p0=(issued_for)) }}</h2>
+  <p>{{ _('It will not be shown again.') }}</p>
+  <code class="secret-token">{{ issued_token or one_time_secret }}</code>
+  {% if issued_token and issued %}
+  <h3>{{ _('Message for the partner (English)') }}</h3>
+  <textarea class="share-message" rows="16" readonly data-select-on-click>Hello,
+
+here is your ParkPilot API access.
+
+API key: {{ issued_token }}
+Base URL: {{ request.url_root }}v1
+Documentation: {{ request.url_root }}v1/docs
+Maps: {{ issued.lots|join(', ') }}
+Features: {{ issued.features|join(', ') }}
+Limit: {{ issued.rpm }} requests per minute
+Price: {{ "%.2f"|format(issued.price) }} EUR per month
+{% if issued.key_type == 'sk' %}This is a secret key. Use it on your server only, never in browser code.{% else %}This public key only works from: {{ issued.origins|join(', ') }}{% endif %}
+{% if issued.webhook %}Webhook: {{ issued.webhook.url }}
+Webhook signing secret: {{ issued.webhook.secret }}
+Events: {{ issued.webhook.events|join(', ') }}
+Check the X-ParkPilot-Signature header (HMAC-SHA256 of the raw body with this secret).{% endif %}
+
+Test:
+curl {{ request.url_root }}v1/products -H "Authorization: Bearer {{ issued_token }}"</textarea>
+  <p><button type="button" class="btn" data-copy-previous>{{ _('Copy English message') }}</button></p>
+  <h3>{{ _('Nachricht an den Partner (Deutsch)') }}</h3>
+  <textarea class="share-message" rows="16" readonly data-select-on-click>Hallo,
+
+hier ist Ihr ParkPilot-API-Zugang.
+
+API-Schluessel: {{ issued_token }}
+Basis-URL: {{ request.url_root }}v1
+Dokumentation: {{ request.url_root }}v1/docs
+Karten: {{ issued.lots|join(', ') }}
+Funktionen: {{ issued.features|join(', ') }}
+Limit: {{ issued.rpm }} Anfragen pro Minute
+Preis: {{ "%.2f"|format(issued.price) }} EUR pro Monat
+{% if issued.key_type == 'sk' %}Dies ist ein geheimer Schluessel. Nur auf Ihrem Server verwenden, niemals im Browser.{% else %}Dieser oeffentliche Schluessel funktioniert nur von: {{ issued.origins|join(', ') }}{% endif %}
+{% if issued.webhook %}Webhook: {{ issued.webhook.url }}
+Webhook-Signaturgeheimnis: {{ issued.webhook.secret }}
+Ereignisse: {{ issued.webhook.events|join(', ') }}
+Pruefen Sie den Header X-ParkPilot-Signature (HMAC-SHA256 des rohen Bodys mit diesem Geheimnis).{% endif %}
+
+Test:
+curl {{ request.url_root }}v1/products -H "Authorization: Bearer {{ issued_token }}"</textarea>
+  <p><button type="button" class="btn" data-copy-previous>{{ _('Nachricht kopieren') }}</button></p>
+  {% endif %}
+</section>
+{% endif %}
+<section class="panel"><h2>{{ _('Access requests') }}</h2>
+  {% if requests %}<div class="table-wrap"><table><thead><tr><th>{{ _('Parking') }}</th><th>{{ _('Bundle') }}</th><th>{{ _('Note') }}</th><th>{{ _('Status') }}</th><th></th></tr></thead><tbody>
+  {% for r in requests %}<tr><td>{{ tenant_names.get(r.tenant_id, r.tenant_id) }}</td><td>{{ bundles[r.bundle].label if r.bundle in bundles else r.bundle }}</td><td>{{ r.note }}</td><td>{{ r.status|title|tr }}</td>
+    <td>{% if r.status == 'pending' %}
+      <form method="post" class="inline" action="{{ url_for('admin.platform_api_request_decide', request_id=r.id, decision='approve') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-primary">{{ _('Approve & create key') }}</button></form>
+      <form method="post" class="inline" action="{{ url_for('admin.platform_api_request_decide', request_id=r.id, decision='reject') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger">{{ _('Reject') }}</button></form>{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>{% else %}<div class="empty">{{ _('No requests.') }}</div>{% endif %}
+</section>
+<section class="panel"><h2>{{ _('Create partner access') }}</h2>
+  <p class="muted">{{ _('Choose the partner, the maps and the features. The monthly price is calculated for you. One button creates the key (and, if you want, the webhook).') }}</p>
+  <form method="post" action="{{ url_for('admin.platform_api_key_issue') }}" class="form partner-form" id="partner-form" data-config='{{ pricing|tojson }}'>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="partner-layout"><div class="partner-main">
+    <div class="row2"><div class="field"><label for="k-tenant">{{ _('Partner (parking)') }}</label><select id="k-tenant" name="tenant_id">{% for t in tenants %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="k-name">{{ _('Key name') }}</label><input id="k-name" name="name" maxlength="100" placeholder="{{ _('e.g. Partner X website') }}"></div></div>
+    <fieldset class="pay-choice cols"><legend>{{ _('Maps the key may use') }}</legend>
+      {% for t in tenants %}<div class="lot-group" data-tenant="{{ t.id }}">
+        {% for lot in lots_by_tenant.get(t.id, []) %}<label class="pay-option"><input type="checkbox" name="lot_ids" value="{{ lot.id }}" checked><span>{{ lot.name }}</span></label>
+        {% else %}<span class="muted">{{ _('This partner has no active map yet.') }}</span>{% endfor %}
+      </div>{% endfor %}
+    </fieldset>
+    <fieldset class="pay-choice cols"><legend>{{ _('Features') }}</legend>
+      <p class="preset-row"><span class="muted">{{ _('Quick start:') }}</span>
+        <button type="button" class="btn" data-preset="reports">{{ _('Reports') }}</button>
+        <button type="button" class="btn" data-preset="widget">{{ _('Booking widget') }}</button>
+        <button type="button" class="btn" data-preset="integration">{{ _('Full integration') }}</button></p>
+      {% for code, f in pricing.features.items() %}<label class="pay-option"><input type="checkbox" name="features" value="{{ code }}"><span>{{ f.label }} <small class="muted">+{{ "%.0f"|format(f.price|float) }} EUR</small></span></label>{% endfor %}
+    </fieldset>
+    <div class="row2"><div class="field"><label for="k-origins">{{ _('Partner website (optional, https://...)') }}</label><input id="k-origins" name="allowed_origins" placeholder="https://partner.com">
+      <small class="muted">{{ _('With a website the key is a public key for browser code (map, quotes, holds, bookings only). Without it, it is a secret key for the partner\'s server.') }}</small></div>
+    <div class="field"><label for="k-webhook">{{ _('Webhook address (optional, https://...)') }}</label><input id="k-webhook" type="url" name="webhook_url" placeholder="https://partner.com/parkpilot-events">
+      <small class="muted">{{ _('Needs the booking or inspection features. Only events of the chosen maps are sent.') }}</small></div></div>
+    </div>
+    <aside class="partner-side"><div class="price-box" aria-live="polite"><h3>{{ _('Monthly price') }}</h3><ul id="price-lines"></ul><p class="tier-price"><strong id="price-total">0.00</strong> {{ _('EUR / month') }}</p>
+      <button class="btn btn-primary btn-wide">{{ _('Create key') }}</button></div></aside>
+    </div>
+  </form>
+  <script defer src="{{ url_for('static', filename='js/platform-keys.js') }}"></script>
+</section>
+<section class="panel"><h2>{{ _('Keys') }}</h2><p class="muted">{{ _('Expected monthly income from active keys:') }} <strong>{{ "%.2f"|format(mrr) }} EUR</strong>{{ _('. Invoicing is not automated yet.') }}</p>
+  {% if keys %}<div class="table-wrap"><table><thead><tr><th>{{ _('Parking') }}</th><th>{{ _('Name') }}</th><th>{{ _('Prefix') }}</th><th>{{ _('Type') }}</th><th>{{ _('Maps') }}</th><th>{{ _('Price / month') }}</th><th>{{ _('Last used') }}</th><th>{{ _('State') }}</th><th></th></tr></thead><tbody>
+  {% for k in keys %}<tr><td>{{ tenant_names.get(k.tenant_id, k.tenant_id) }}</td><td>{{ k.name }}</td><td><code>{{ k.prefix }}</code></td><td>{{ k.key_type }}</td><td>{% if k.allowed_lot_ids %}{% for i in k.allowed_lot_ids %}{{ lot_names.get(i, i) }}{{ ', ' if not loop.last }}{% endfor %}{% else %}{{ _('All maps') }}{% endif %}</td><td>{{ '%.2f'|format(k.monthly_price or 0) }} EUR</td><td>{{ k.last_used_at.strftime('%Y-%m-%d %H:%M') if k.last_used_at else _('Never') }}</td><td>{{ _('Active') if k.active else _('Revoked') }}</td>
+    <td class="right"><a class="btn" href="{{ url_for('admin.platform_api_key_edit', key_id=k.id) }}">{{ _('Edit') }}</a>
+      {% if k.active %}<form method="post" class="inline" action="{{ url_for('admin.platform_api_key_revoke', key_id=k.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn">{{ _('Revoke') }}</button></form>{% endif %}
+      <form method="post" class="inline" action="{{ url_for('admin.platform_api_key_delete', key_id=k.id) }}" data-confirm="{{ _('Delete key %(p0)s permanently? Anything using it stops working and its usage history is removed.', p0=(k.prefix)) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger">{{ _('Delete') }}</button></form></td></tr>{% endfor %}
+  </tbody></table></div>{% else %}<div class="empty">{{ _('No keys.') }}</div>{% endif %}
+</section>
+<section class="panel"><h2>{{ _('Add a webhook') }}</h2>
+  <form method="post" action="{{ url_for('admin.platform_webhook_create') }}" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row2"><div class="field"><label for="w-tenant">{{ _('Parking') }}</label><select id="w-tenant" name="tenant_id">{% for t in tenants %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="w-name">{{ _('Name') }}</label><input id="w-name" name="name" maxlength="100" required></div></div>
+    <div class="field"><label for="w-url">{{ _('HTTPS endpoint URL') }}</label><input id="w-url" type="url" name="url" required></div>
+    <fieldset class="pay-choice"><legend>{{ _('Events') }}</legend>{% for e in events %}<label class="pay-option"><input type="checkbox" name="events" value="{{ e }}" checked><span>{{ e }}</span></label>{% endfor %}</fieldset>
+    <button class="btn btn-primary">{{ _('Create webhook') }}</button>
+  </form>
+</section>
+<section class="panel"><h2>{{ _('Webhooks') }}</h2>
+  {% if endpoints %}<div class="table-wrap"><table><thead><tr><th>{{ _('Parking') }}</th><th>{{ _('Name') }}</th><th>URL</th><th>{{ _('State') }}</th><th></th></tr></thead><tbody>
+  {% for e in endpoints %}<tr><td>{{ tenant_names.get(e.tenant_id, e.tenant_id) }}</td><td>{{ e.name }}</td><td>{{ e.url }}</td><td>{{ _('Active') if e.active else _('Disabled') }}</td>
+    <td class="right"><a class="btn" href="{{ url_for('admin.platform_webhook_edit', endpoint_id=e.id) }}">{{ _('Edit') }}</a>
+      {% if e.active %}<form method="post" class="inline" action="{{ url_for('admin.platform_webhook_rotate', endpoint_id=e.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn">{{ _('New secret') }}</button></form>
+      <form method="post" class="inline" action="{{ url_for('admin.platform_webhook_revoke', endpoint_id=e.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn">{{ _('Disable') }}</button></form>{% endif %}
+      <form method="post" class="inline" action="{{ url_for('admin.platform_webhook_delete', endpoint_id=e.id) }}" data-confirm="{{ _('Delete webhook %(p0)s permanently?', p0=(e.name)) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger">{{ _('Delete') }}</button></form></td></tr>{% endfor %}
+  </tbody></table></div>{% else %}<div class="empty">{{ _('No webhooks.') }}</div>{% endif %}
+</section>
+{% endblock %}

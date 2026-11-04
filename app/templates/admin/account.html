@@ -1,0 +1,123 @@
+{% extends layout %}
+{% from "_avatar.html" import avatar %}
+{% from "_icons.html" import icon with context %}
+{% macro ifield(f, ico, hint=None) %}
+<div class="field ifield">
+  {{ f.label }}
+  <div class="ifield-box"><span class="ifield-ic">{{ icon(ico) }}</span>{{ f(**kwargs) }}</div>
+  {% if hint %}<small class="hint">{{ _(hint) }}</small>{% endif %}
+  {% for e in f.errors %}<small class="err">{{ icon('alert') }} {{ _(e) }}</small>{% endfor %}
+</div>
+{% endmacro %}
+{% block title %}{{ _('My profile') }} - ParkPilot{% endblock %}
+{% block content %}
+{% set steps = [(current_user.avatar_updated_at is not none, 'photo', 'camera', _('Profile photo')), ((current_user.name or '')|trim != '', 'profile', 'user', _('Full name')), (current_user.phone is not none, 'profile', 'phone', _('Recovery phone number'))] %}
+{% set pct = (steps|selectattr(0)|list|length * 100 / 3)|round|int %}
+{% set role_icon = {'platform_owner': 'crown', 'owner': 'key'}.get(current_user.role, 'badge') %}
+<div class="acct" id="acct" data-section="{{ section }}" data-pct="{{ pct }}"
+     data-show="{{ _('Show') }}" data-hide="{{ _('Hide') }}" data-too-big="{{ _('The photo is larger than 3 MB. Choose a smaller one.') }}" data-bad-type="{{ _('Only PNG, JPEG and WebP photos are accepted.') }}"
+     data-drop="{{ _('Drop the photo to use it') }}" data-copy="{{ _('Copy') }}" data-copied="{{ _('Copied') }}" data-close="{{ _('Close') }}"
+     data-weak="{{ _('Weak') }}" data-good="{{ _('Good') }}" data-strong="{{ _('Strong') }}" data-match="{{ _('Passwords match') }}" data-nomatch="{{ _('Passwords do not match yet') }}">
+  <div class="head"><div><h1>{{ _('My profile') }}</h1><p class="muted">{{ _('Manage your photo, name, email and password.') }}</p></div></div>
+
+  <header class="acct-banner">
+    <div class="acct-cover" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
+    <div class="acct-id">
+      <div class="acct-avatar">{{ avatar(current_user, 'xl') }}<label class="acct-cam" for="photo-input" title="{{ _('Change photo') }}"><span class="sr-only">{{ _('Change photo') }}</span>{{ icon('camera') }}</label></div>
+      <div class="acct-id-text">
+        <h2>{{ current_user.name or current_user.email }}</h2>
+        <p class="muted" dir="ltr">{{ current_user.email }}</p>
+        <p class="acct-chips">
+          <span class="chip">{{ icon(role_icon) }} {{ current_user.role|replace('_', ' ')|title|tr }}</span>
+          {% if current_user.tenant %}<span class="chip chip-quiet">{{ icon('building') }} {{ current_user.tenant.name }}</span>{% endif %}
+        </p>
+      </div>
+      <dl class="acct-facts">
+        {% if current_user.last_login_at %}<div><dt>{{ icon('clock') }} {{ _('Last sign-in') }}</dt><dd>{{ current_user.last_login_at.strftime('%Y-%m-%d %H:%M') }} UTC</dd></div>{% endif %}
+        <div><dt>{{ icon('calendar') }} {{ _('Member since') }}</dt><dd>{{ current_user.created_at.strftime('%Y-%m-%d') }}</dd></div>
+      </dl>
+    </div>
+  </header>
+
+  <div class="acct-layout">
+    <aside class="acct-side">
+      <section class="panel acct-score" aria-label="{{ _('Profile completeness') }}">
+        <div class="ring" role="img" aria-label="{{ pct }}%">
+          <svg viewBox="0 0 100 100" aria-hidden="true"><circle class="ring-track" cx="50" cy="50" r="42"/><circle class="ring-bar" cx="50" cy="50" r="42" pathLength="100"/></svg>
+          <div class="ring-text"><strong id="score-num">{{ pct }}</strong><span>%</span></div>
+        </div>
+        <div>
+          <h2>{{ _('Profile completeness') }}</h2>
+          <ul class="score-list">
+            {% for done, anchor, ico, label in steps %}<li class="{{ 'done' if done }}"><a href="#{{ anchor }}">{{ icon('check-circle' if done else 'circle') }}<span>{{ label }}</span></a></li>{% endfor %}
+          </ul>
+        </div>
+      </section>
+      <nav class="panel acct-nav" aria-label="{{ _('Profile sections') }}">
+        <a href="#photo">{{ icon('camera') }}<span>{{ _('Photo') }}</span></a>
+        <a href="#profile">{{ icon('user') }}<span>{{ _('Personal details') }}</span></a>
+        <a href="#email">{{ icon('mail') }}<span>{{ _('Email address') }}</span></a>
+        <a href="#password">{{ icon('lock') }}<span>{{ _('Password') }}</span></a>
+      </nav>
+    </aside>
+
+    <div class="acct-main">
+      <section class="panel acct-card" id="photo">
+        <header class="acct-card-head"><span class="acct-ico">{{ icon('camera') }}</span><div><h2>{{ _('Photo') }}</h2><p class="muted">{{ _('PNG, JPEG or WebP, up to 3 MB. It is cropped to a square.') }}</p></div></header>
+        <form method="post" action="{{ url_for('auth.account_photo') }}" enctype="multipart/form-data" id="photo-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input id="photo-input" class="sr-only" type="file" name="photo" accept="image/png,image/jpeg,image/webp">
+          <label class="dropzone" id="dropzone" for="photo-input">
+            <span class="drop-preview" id="photo-preview">{{ avatar(current_user, 'lg') }}</span>
+            <span class="drop-text"><strong>{{ _('Drag a photo here or click to choose') }}</strong><small id="photo-name" role="status">{{ _('PNG, JPEG or WebP, up to 3 MB. It is cropped to a square.') }}</small></span>
+            <span class="drop-ico">{{ icon('upload', 'ic-lg') }}</span>
+          </label>
+          <div class="acct-actions">
+            <button class="btn btn-primary btn-ic" id="photo-save" disabled>{{ icon('check') }} {{ _('Save photo') }}</button>
+          </div>
+        </form>
+        {% if current_user.avatar_updated_at %}
+        <form method="post" action="{{ url_for('auth.account_photo') }}" class="acct-remove">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="remove" value="1">
+          <button class="btn btn-quiet btn-ic btn-warn">{{ icon('trash') }} {{ _('Remove photo') }}</button>
+        </form>
+        {% endif %}
+      </section>
+
+      <section class="panel acct-card" id="profile">
+        <header class="acct-card-head"><span class="acct-ico">{{ icon('user') }}</span><div><h2>{{ _('Personal details') }}</h2></div></header>
+        <form method="post" action="{{ url_for('auth.account_profile') }}" class="form" novalidate>
+          {{ profile_form.hidden_tag() }}
+          {{ ifield(profile_form.name, 'user', autocomplete="name") }}
+          {{ ifield(profile_form.phone, 'phone', hint="Used for the text-message code if you forget your password. Include the country code, for example +4915112345678.", autocomplete="tel", inputmode="tel") }}
+          <button class="btn btn-primary btn-ic">{{ icon('check') }} {{ _('Save changes') }}</button>
+        </form>
+      </section>
+
+      <section class="panel acct-card" id="email">
+        <header class="acct-card-head"><span class="acct-ico">{{ icon('mail') }}</span><div><h2>{{ _('Email address') }}</h2><p class="muted">{{ _('You sign in with this address. For your security the old address is notified and your password is required.') }}</p></div></header>
+        <div class="current-email"><span class="ifield-ic">{{ icon('mail') }}</span><strong dir="ltr" id="current-email">{{ current_user.email }}</strong>
+          <button type="button" class="copy-btn" data-copy-target="current-email" title="{{ _('Copy') }}">{{ icon('copy') }}<span class="sr-only">{{ _('Copy') }}</span></button></div>
+        <form method="post" action="{{ url_for('auth.account_email') }}" class="form" autocomplete="off" novalidate>
+          {{ email_form.hidden_tag() }}
+          {{ ifield(email_form.new_email, 'mail', autocomplete="email") }}
+          {{ ifield(email_form.current_password, 'lock', autocomplete="current-password") }}
+          <button class="btn btn-primary btn-ic">{{ icon('check') }} {{ _('Change email') }}</button>
+        </form>
+      </section>
+
+      <section class="panel acct-card" id="password">
+        <header class="acct-card-head"><span class="acct-ico">{{ icon('shield') }}</span><div><h2>{{ _('Password') }}</h2><p class="muted">{{ _('Use at least 12 characters. A long phrase of several words works best.') }}</p></div></header>
+        <form method="post" action="{{ url_for('auth.change_password') }}" class="form" autocomplete="off" novalidate>
+          {{ password_form.hidden_tag() }}
+          {{ ifield(password_form.current_password, 'lock', autocomplete="current-password") }}
+          {{ ifield(password_form.new_password, 'lock', autocomplete="new-password", **{'data-meter': '1'}) }}
+          {{ ifield(password_form.confirm_password, 'lock', autocomplete="new-password", **{'data-confirm': '1'}) }}
+          <button class="btn btn-primary btn-ic">{{ icon('shield') }} {{ _('Change password') }}</button>
+        </form>
+      </section>
+    </div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/account.js') }}" defer></script>
+{% endblock %}

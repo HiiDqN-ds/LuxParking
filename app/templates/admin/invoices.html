@@ -1,0 +1,37 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Invoices - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">🧾</span> {{ _('Invoices') }}</h1><p class="muted">{{ _('Every invoice (Rechnung) and credit note (Gutschrift) issued for your bookings. Customers receive them by email and can download them from their booking page.') }}</p></div>
+  <p class="actions"><a class="btn" href="{{ url_for('manage.invoices_csv') }}">{{ _('Export CSV') }}</a>
+  <a class="btn" href="{{ url_for('manage.invoice_settings') }}">{{ _('Seller details & VAT') }}</a></p></div>
+<details class="panel menge-help"><summary><strong>{{ _('What does Menge (quantity) mean on the invoice?') }}</strong></summary>
+  <p>{{ _('Menge is the number of units charged on one invoice line. The amount of a line is always Menge × unit price, and the invoice total is the sum of all lines.') }}</p>
+  <ul>
+    <li>{{ _('Parking: one line with Menge 1. The price is one flat amount for the whole stay, calculated from your price rules; the days of the stay are printed under the line.') }}</li>
+    <li>{{ _('Airport shuttle: the shuttle line has Menge 1 and its price includes 2 persons. Every additional person is a separate line whose Menge is the number of additional persons.') }}</li>
+    <li>{{ _('Example: a shuttle for 4 persons priced 20.00 with 5.00 per additional person is 1 × 20.00 plus 2 × 5.00 = 30.00.') }}</li>
+    <li>{{ _('VAT is not a separate charge: your prices are gross, and the invoice shows how much VAT is contained in the total.') }}</li>
+  </ul></details>
+<form class="filters" method="get">
+  <label>{{ _('Search') }}<input type="search" name="q" value="{{ q }}" placeholder="{{ _('Number, booking, customer or email') }}"></label>
+  <label>{{ _('Type') }}<select name="kind"><option value="">{{ _('All') }}</option><option value="invoice" {% if kind == 'invoice' %}selected{% endif %}>{{ _('Invoices') }}</option><option value="credit_note" {% if kind == 'credit_note' %}selected{% endif %}>{{ _('Credit notes') }}</option></select></label>
+  <label>{{ _('Status') }}<select name="status"><option value="">{{ _('All') }}</option>{% for s in ('open','paid','cancelled','credited') %}<option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s|title|tr }}</option>{% endfor %}</select></label>
+  <button class="btn btn-primary">{{ _('Search') }}</button> <a class="btn" href="{{ url_for('manage.invoices') }}">{{ _('Clear') }}</a>
+</form>
+{% if rows %}
+<div class="table-wrap"><table>
+  <thead><tr><th>{{ _('Number') }}</th><th>{{ _('Date') }}</th><th>{{ _('Customer') }}</th><th>{{ _('Booking') }}</th><th>{{ _('Status') }}</th><th>{{ _('Net') }}</th><th>VAT</th><th>{{ _('Total') }}</th><th></th></tr></thead>
+  <tbody>{% for inv in rows %}
+    <tr><td class="nowrap">{{ inv.number }}{% if inv.kind == 'credit_note' %}<small class="sub">{{ _('Credit note') }}</small>{% endif %}</td>
+      <td class="nowrap">{{ inv.issued_at.strftime('%Y-%m-%d') }}</td>
+      <td>{{ inv.customer_name }}<small class="sub">{{ inv.customer_email }}</small></td>
+      <td class="nowrap">{% if inv.booking_id %}<a href="{{ url_for('manage.booking_detail', booking_id=inv.booking_id) }}">{{ inv.booking_ref }}</a>{% else %}{{ inv.booking_ref }}{% endif %}</td>
+      <td>{{ inv.status|title|tr }}</td>
+      <td class="nowrap">{{ '%.2f'|format(inv.net_amount) }}</td><td class="nowrap">{{ '%.2f'|format(inv.vat_amount) }}</td>
+      <td class="nowrap"><strong>{{ '%.2f'|format(inv.gross_amount) }} {{ inv.currency }}</strong></td>
+      <td class="right"><a class="btn" href="{{ url_for('manage.invoice_download', invoice_id=inv.id) }}">PDF</a></td></tr>
+  {% endfor %}</tbody>
+</table></div>
+{% if rows|length == 500 %}<p class="muted">{{ _('Showing the newest 500. Use the filters or the CSV export for older documents.') }}</p>{% endif %}
+{% else %}<div class="empty"><p>{{ _('No invoices match these filters yet. An invoice is created automatically for every confirmed booking.') }}</p></div>{% endif %}
+{% endblock %}

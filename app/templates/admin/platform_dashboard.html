@@ -1,0 +1,39 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Platform overview - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><div><p class="eyebrow">{{ _('Platform administration') }}</p><h1><span class="h-ico" aria-hidden="true">🏢</span> {{ _('Platform overview') }}</h1>
+  <p class="muted">{{ _('Tenant accounts, platform activity, and paid booking value.') }}</p></div></div>
+<section class="dashboard-metrics" aria-label="{{ _('Platform summary') }}">
+  <article class="metric"><span><i class="m-ico" aria-hidden="true">🏢</i> {{ _('Tenants') }}</span><strong>{{ totals.tenants }}</strong></article>
+  <article class="metric"><span><i class="m-ico" aria-hidden="true">✅</i> {{ _('Active') }}</span><strong>{{ totals.active }}</strong></article>
+  <article class="metric"><span><i class="m-ico" aria-hidden="true">🧪</i> {{ _('Trials') }}</span><strong>{{ totals.trial }}</strong></article>
+  <article class="metric"><span><i class="m-ico" aria-hidden="true">⏸️</i> {{ _('Suspended') }}</span><strong>{{ totals.suspended }}</strong></article>
+  <article class="metric"><span><i class="m-ico" aria-hidden="true">📅</i> {{ _('Bookings') }}</span><strong>{{ totals.bookings }}</strong></article>
+  <article class="metric"><span><i class="m-ico" aria-hidden="true">💰</i> {{ _('Paid booking value') }}</span>
+    {% for currency, amount in paid_by_currency %}<strong>{{ "%.2f"|format(amount) }} {{ currency }}</strong>
+    {% else %}<strong>0.00</strong>{% endfor %}
+  </article>
+  <article class="metric"><span><i class="m-ico" aria-hidden="true">📡</i> {{ _('API requests') }}</span><strong>{{ totals.api_calls }}</strong></article>
+</section>
+<p class="muted">{{ _('* Gross paid booking value, not platform subscription or commission revenue. Billing is tracked in Phase 9.') }}</p>
+<section class="panel">
+  <div class="head"><div><h2>{{ _('Tenants') }}</h2><p class="muted">{{ _('Every change is recorded in the platform audit log.') }}</p></div><a class="btn btn-primary" href="{{ url_for('admin.platform_tenant_new') }}">{{ _('Add tenant') }}</a></div>
+  {% if tenants %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>{{ _('Tenant') }}</th><th>{{ _('Status') }}</th><th>{{ _('Lots') }}</th><th>{{ _('Bookings') }}</th><th>{{ _('Paid booking value') }}</th><th>{{ _('API requests') }}</th><th>{{ _('Actions') }}</th></tr></thead>
+    <tbody>{% for tenant, booking_count, paid_total, lot_count, api_calls in tenants %}
+      <tr>
+        <td>{{ tenant.name }}<small class="muted"><br>{{ tenant.slug }}</small></td>
+        <td><span class="badge s-{{ tenant.status }}">{{ tenant.status|title|tr }}</span></td>
+        <td>{{ lot_count }}</td><td>{{ booking_count }}</td><td>{{ "%.2f"|format(paid_total) }} {{ tenant.currency }}</td><td>{{ api_calls }}</td>
+        <td><a class="btn" href="{{ url_for('admin.platform_tenant_detail', tenant_id=tenant.id) }}">{{ _('Manage') }}</a> <form method="post" action="{{ url_for('admin.platform_tenant_status', tenant_id=tenant.id) }}" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% if tenant.status == 'suspended' %}<input type="hidden" name="status" value="active"><button class="btn">{{ _('Activate') }}</button>
+          {% else %}<input type="hidden" name="status" value="suspended"><button class="btn btn-danger">{{ _('Suspend') }}</button>{% endif %}
+        </form></td>
+      </tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty">{{ _('No tenant accounts found.') }}</div>{% endif %}
+</section>
+{% endblock %}

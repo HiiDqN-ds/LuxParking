@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "_avatar.html" import avatar with context %}
+{% block body_class %}staff-app{% endblock %}
+{% block head_extra %}
+  <meta name="theme-color" content="#0F4C5C">
+  <link rel="manifest" href="{{ url_for('static', filename='staff/manifest.webmanifest') }}">
+{% endblock %}
+{% block body %}
+<div class="staff-shell">
+  <header class="staff-header">
+    {% if request.endpoint != 'staff.dashboard' %}
+    <a class="back-btn" id="staff-back" href="{{ url_for('staff.dashboard') }}" aria-label="{{ _('Back') }}">{{ _('← Back') }}</a>
+    {% elif current_user.role == "owner" %}
+    <a class="back-btn" href="{{ url_for('admin.dashboard') }}">{{ _('← Admin dashboard') }}</a>
+    {% endif %}
+    <a class="brand" href="{{ url_for('staff.dashboard') }}">{{ current_user.tenant.name if current_user.tenant else 'ParkPilot' }} <small>{{ _('Staff app · %(p0)s', p0=(current_user.role|title|tr)) }}</small></a>
+    {% include "_alerts_bell.html" %}
+    {% include "_lang_switch.html" %}
+    <nav aria-label="{{ _('Staff navigation') }}" class="staff-nav-desktop">
+      <a href="{{ url_for('staff.dashboard') }}">{{ _('Staff home') }}</a>
+      <a href="{{ url_for('alerts.center') }}">{{ _('Notification centre') }}</a>
+      <a href="{{ url_for('auth.account') }}" class="staff-account">{{ avatar(current_user, 'sm') }} {{ _('Account') }}</a>
+      {% if current_user.role == "owner" %}
+      <a href="{{ url_for('staff.walk_in_hold') }}">{{ _('Walk-in') }}</a>
+      <a href="{{ url_for('staff.disputes') }}">{{ _('Disputes') }}</a>
+      <a href="{{ url_for('admin.dashboard') }}">{{ _('Admin dashboard') }}</a>
+      {% endif %}
+      <form method="post" action="{{ url_for('auth.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-quiet">{{ _('Sign out') }}</button>
+      </form>
+    </nav>
+  </header>
+  <main id="main" class="staff-content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash {{ category }}" role="status">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+    <p class="offline-status" id="offline-status" role="status" aria-live="polite"></p>
+    {% block content %}{% endblock %}
+  </main>
+  <nav class="staff-tabbar" aria-label="{{ _('Quick navigation') }}">
+    <a href="{{ url_for('staff.dashboard') }}" {% if request.endpoint == 'staff.dashboard' %}aria-current="page"{% endif %}>{{ _('Home') }}</a>
+    {% if current_user.role == "owner" %}<a href="{{ url_for('staff.walk_in_hold') }}">{{ _('Walk-in') }}</a><a href="{{ url_for('admin.dashboard') }}">{{ _('Admin dashboard') }}</a>{% endif %}
+    <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">{{ _('Sign out') }}</button></form>
+  </nav>
+</div>
+<script nonce="{{ csp_nonce() }}">window.PP_UI = {{ js_dictionary()|tojson }};</script>
+<script defer src="{{ url_for('static', filename='js/ui-i18n.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/alerts.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/staff-queue.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/staff-inspection.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/staff-pwa.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/staff-nav.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/tables.js') }}"></script>
+{% endblock %}

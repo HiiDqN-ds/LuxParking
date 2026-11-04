@@ -1,0 +1,135 @@
+{% extends "staff/base.html" %}
+{% block title %}{{ _('Booking %(p0)s - ParkPilot', p0=(booking.booking_ref)) }}{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('staff.dashboard') }}">{{ _('← Bookings') }}</a></p>
+<div class="staff-heading">
+  <div><p class="eyebrow">{{ _('Booking %(p0)s', p0=(booking.booking_ref)) }}</p>
+    {% if is_staff %}
+    <h1>{{ booking.vehicle.plate if booking.vehicle else _("Vehicle arriving") }}</h1>
+    <p class="muted">{{ booking.status.replace("_", " ")|title|tr }}</p>
+    {% else %}
+    <h1>{{ booking.customer.first_name }} {{ booking.customer.last_name }}</h1>
+    <p class="muted">{{ _('%(p0)s · Payment %(p1)s', p0=(booking.status.replace("_", " ")|title|tr), p1=(booking.payment_status|title|tr)) }}</p>
+    {% endif %}
+  </div>
+  <p class="actions"><a class="btn" href="{{ url_for('staff.key_tag', booking_id=booking.id) }}" target="_blank" rel="noopener">{{ _('Print key tag') }}</a></p>
+</div>
+<section class="panel staff-summary">
+  <dl>
+    <div><dt>{{ _('Vehicle') }}</dt><dd>{{ booking.vehicle.make if booking.vehicle else "" }} {{ booking.vehicle.model if booking.vehicle else "" }} {{ booking.vehicle.plate if booking.vehicle else _("Not provided") }}</dd></div>
+    {% if is_staff and booking.vehicle and booking.vehicle.color %}<div><dt>{{ _('Color') }}</dt><dd>{{ booking.vehicle.color }}</dd></div>{% endif %}
+    <div><dt>{{ _('Pick-up') }}</dt><dd>{{ booking.pickup_at.strftime("%Y-%m-%d %H:%M") }}</dd></div>
+    <div><dt>{{ _('Return') }}</dt><dd>{{ booking.return_at.strftime("%Y-%m-%d %H:%M") }}</dd></div>
+    <div><dt>{{ _('Space') }}</dt><dd>{{ booking.space.name }}{% if not is_staff %} · {{ booking.lot.name }}{% endif %}</dd></div>
+    {% if not is_staff %}<div><dt>{{ _('Phone') }}</dt><dd><a href="tel:{{ booking.customer.phone }}">{{ booking.customer.phone }}</a></dd></div>{% endif %}
+  </dl>
+</section>
+{% set arrival = inspections.get("arrival") %}
+{% set departure = inspections.get("departure") %}
+<section class="panel next-step" aria-labelledby="next-step-title">
+  <p class="eyebrow" id="next-step-title">{{ _('Next step') }}</p>
+  {% if booking.status == "reserved" and not arrival %}
+    <h2>{{ _('Arrival check') }}</h2><p class="muted">{{ _('Take the vehicle photos with the customer, then check them in.') }}</p>
+    <form method="post" action="{{ url_for('staff.start_inspection', booking_id=booking.id, phase='arrival') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-primary btn-lg">{{ _('Start check-in photos') }}</button></form>
+  {% elif booking.status == "reserved" and arrival.status != "completed" %}
+    <h2>{{ _('Finish the arrival photos') }}</h2>
+    <a class="btn btn-primary btn-lg" href="{{ url_for('staff.inspection_page', booking_id=booking.id, phase='arrival') }}">{{ _('Continue photos') }}</a>
+  {% elif booking.status == "reserved" %}
+    <h2>{{ _('Photos done. Check the customer in.') }}</h2>
+    <form method="post" action="{{ url_for('staff.check_in', booking_id=booking.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-primary btn-lg">{{ _('Confirm check-in') }}</button></form>
+  {% elif booking.status == "checked_in" and not departure %}
+    <h2>{{ _('Return check') }}</h2><p class="muted">{{ _('Compare the vehicle with the arrival photos, then check the customer out.') }}</p>
+    <form method="post" action="{{ url_for('staff.start_inspection', booking_id=booking.id, phase='departure') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-primary btn-lg">{{ _('Start check-out photos') }}</button></form>
+  {% elif booking.status == "checked_in" and departure.status != "completed" %}
+    <h2>{{ _('Finish the return photos') }}</h2>
+    <a class="btn btn-primary btn-lg" href="{{ url_for('staff.inspection_page', booking_id=booking.id, phase='departure') }}">{{ _('Continue photos') }}</a>
+  {% elif booking.status == "checked_in" %}
+    <h2>{{ _('Photos done. Check the customer out.') }}</h2>
+    <form method="post" action="{{ url_for('staff.check_out', booking_id=booking.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-primary btn-lg">{{ _('Confirm check-out') }}</button></form>
+  {% else %}
+    <h2>{{ booking.status.replace("_", " ")|title|tr }}</h2><p class="muted">{{ _('Nothing left to do for this booking.') }}</p>
+  {% endif %}
+</section>
+{% set open_extras = booking.extras|rejectattr("status", "equalto", "cancelled")|list %}
+{% if open_extras %}
+<section class="panel" aria-labelledby="extras-title">
+  <h2 id="extras-title">{{ _('Extras ordered') }}</h2>
+  <ul class="task-list">
+    {% for e in open_extras %}
+    <li><span class="badge s-{{ 'optional' if e.kind == 'shuttle' else 'active' }}">{{ e.kind|title|tr }}</span>
+      <strong>{{ e.name }}</strong>{% if e.details %}<small class="muted"> · {{ e.details }}</small>{% endif %}
+      <form method="post" class="inline" action="{{ url_for('staff.extra_task', booking_id=booking.id, row_id=e.id, op='reopen' if e.status == 'done' else 'done') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn {{ '' if e.status == 'done' else 'btn-primary' }}">{{ _('Done ✓ (undo)') if e.status == 'done' else _('Mark done') }}</button></form></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% if vehicle_photos %}
+<section class="panel" aria-labelledby="vehicle-profile-photos-heading">
+  <h2 id="vehicle-profile-photos-heading">{{ _('Vehicle profile photos') }}</h2>
+  <p class="muted">{{ _('Arrival-inspection photos linked to this vehicle. They follow the tenant’s configured evidence-retention period.') }}</p>
+  <div class="evidence-grid">
+    {% for photo in vehicle_photos %}
+    <a class="evidence-preview" href="{{ url_for('staff.photo', photo_id=photo.id) }}">
+      <img src="{{ url_for('staff.photo', photo_id=photo.id) }}" alt="{{ _('%(p0)s vehicle photo', p0=(photo.category.replace('_', ' ')|title|tr)) }}" loading="lazy">
+      <span>{{ photo.category.replace("_", " ")|title|tr }} · {{ photo.captured_at.strftime("%Y-%m-%d %H:%M") }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+<section class="panel staff-qr-panel">
+  <div><h2>{{ _('Signed booking QR') }}</h2><p class="muted">{{ _('The QR contains a signed lookup link only; no customer details are encoded.') }}</p></div>
+  <img src="{{ url_for('staff.booking_qr', booking_id=booking.id) }}" width="180" height="180"
+       alt="{{ _('Signed QR code for booking %(p0)s', p0=(booking.booking_ref)) }}" loading="lazy">
+</section>
+<section class="panel">
+  <h2>{{ _('Vehicle checks') }}</h2>
+  <div class="inspection-actions">
+    {% set arrival = inspections.get("arrival") %}
+    {% set departure = inspections.get("departure") %}
+    {% if arrival %}
+      <a class="btn" href="{{ url_for('staff.inspection_page', booking_id=booking.id, phase='arrival') }}">{{ _('Arrival inspection · %(p0)s', p0=(arrival.status|replace("_", " ")|title|tr)) }}</a>
+    {% elif booking.status == "reserved" %}
+      <form method="post" action="{{ url_for('staff.start_inspection', booking_id=booking.id, phase='arrival') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-primary">{{ _('Start arrival inspection') }}</button>
+      </form>
+    {% endif %}
+    {% if booking.status == "reserved" %}
+      <form method="post" action="{{ url_for('staff.check_in', booking_id=booking.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-primary">{{ _('Confirm check-in') }}</button>
+      </form>
+    {% endif %}
+    {% if departure %}
+      <a class="btn" href="{{ url_for('staff.inspection_page', booking_id=booking.id, phase='departure') }}">{{ _('Departure inspection · %(p0)s', p0=(departure.status|replace("_", " ")|title|tr)) }}</a>
+    {% elif booking.status == "checked_in" %}
+      <form method="post" action="{{ url_for('staff.start_inspection', booking_id=booking.id, phase='departure') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn">{{ _('Start departure inspection') }}</button>
+      </form>
+    {% endif %}
+    {% if booking.status == "checked_in" %}
+      <form method="post" action="{{ url_for('staff.check_out', booking_id=booking.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-primary">{{ _('Confirm check-out') }}</button>
+      </form>
+    {% endif %}
+  </div>
+</section>
+{% if disputes and not is_staff %}
+<section class="panel dispute-panel">
+  <h2>{{ _('Damage disputes') }}</h2>
+  {% for dispute in disputes %}
+  <article>
+    <strong>{{ _('Dispute #%(p0)s · %(p1)s', p0=(dispute.id), p1=(dispute.status|title|tr)) }}</strong>
+    <p>{{ dispute.damage_mark.kind.replace("_", " ")|title|tr }} — {{ dispute.damage_mark.notes or _("No note") }}</p>
+    {% if dispute.damage_mark.photo_id %}
+      <a href="{{ url_for('staff.photo', photo_id=dispute.damage_mark.photo_id) }}">{{ _('View new-damage evidence') }}</a>
+    {% endif %}
+  </article>
+  {% endfor %}
+</section>
+{% endif %}
+{% endblock %}

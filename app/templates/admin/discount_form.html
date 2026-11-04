@@ -1,0 +1,15 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Edit discount code - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><h1>{{ _('Edit discount code') }}</h1><a class="btn" href="{{ url_for('admin.discounts') }}">{{ _('Back to discounts') }}</a></div>
+<section class="panel">
+  <form method="post" class="form">
+    {{ form.hidden_tag() }}
+    {% for field in (form.code, form.discount_type, form.value, form.starts_on, form.ends_on, form.minimum_amount, form.max_redemptions) %}
+    <div class="field">{{ field.label }}{{ field() }}{% for error in field.errors %}<small class="err">{{ _(error) }}</small>{% endfor %}</div>
+    {% endfor %}
+    <label class="check">{{ form.active() }} {{ form.active.label.text }}</label>
+    <button class="btn btn-primary">{{ _('Save code') }}</button>
+  </form>
+</section>
+{% endblock %}

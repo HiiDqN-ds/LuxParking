@@ -1,0 +1,28 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import field, check %}
+{% block title %}{{ _('%(p0)s - ParkPilot', p0=((_('Edit ') ~ space.name) if space else _('Add space'))) }}{% endblock %}
+{% block content %}
+<h1>{{ (_('Edit space ') ~ space.name) if space else _('Add space') }}</h1>
+<p class="muted">{{ lot.name }}</p>
+<form method="post" class="form" novalidate>
+  {{ form.hidden_tag() }}
+  <div class="row2">{{ field(form.name) }}{{ field(form.kind) }}</div>
+  {{ field(form.status, hint=_("Available spaces show green on the booking map, optional blue, blocked grey.")) }}
+  <div class="checks">{{ check(form.covered) }}{{ check(form.ev_charging) }}{{ check(form.default_available) }}</div>
+  <div class="row2">{{ field(form.base_price, hint=_("Space-specific base price override. Base lot rate remains the default fallback.")) }}{{ field(form.bus_distance_m) }}</div>
+  <div class="row2">{{ field(form.min_hours) }}{{ field(form.max_days) }}</div>
+  {{ field(form.photo_url, hint=_("Shown on the space card in the booking map.")) }}
+  <fieldset><legend>{{ _('Position on the lot map (%(p0)s × %(p1)s)', p0=(lot.canvas_w), p1=(lot.canvas_h)) }}</legend>
+    <div class="row4">{{ field(form.x) }}{{ field(form.y) }}{{ field(form.w) }}{{ field(form.h) }}</div></fieldset>
+  {{ field(form.notes) }}
+  <p class="actions"><button class="btn btn-primary">{{ _('Save space') }}</button>
+    <a class="btn btn-quiet" href="{{ url_for('admin.spaces', lot_id=lot.id) }}">{{ _('Cancel') }}</a></p>
+</form>
+{% if space %}
+<form method="post" action="{{ url_for('admin.space_delete', space_id=space.id) }}" class="danger"
+      data-confirm="{{ _('Delete space %(p0)s? Bookings will block deletion in a later phase; blocking is safer.', p0=(space.name)) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="btn btn-danger">{{ _('Delete space') }}</button>
+</form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('New booking - ParkPilot') }}{% endblock %}
+{% block content %}
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">➕</span> {{ _('New booking') }}</h1><p class="muted">{{ _('For phone and email customers. The space is checked for conflicts before the booking is saved.') }}</p></div></div>
+<form method="post" class="panel form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <h2>{{ _('Stay') }}</h2>
+  <div class="field"><label for="space_id">{{ _('Space') }}</label>
+    <select id="space_id" name="space_id" required>{% for s in spaces %}<option value="{{ s.id }}" {% if form.get('space_id')|string == s.id|string %}selected{% endif %}>{{ lots[s.lot_id].name }} · {{ s.name }} ({{ s.kind }})</option>{% endfor %}</select></div>
+  <div class="row2">
+    <div class="field"><label for="pickup_at">{{ _('Pick-up') }}</label><input id="pickup_at" type="datetime-local" name="pickup_at" value="{{ form.get('pickup_at','') }}" required></div>
+    <div class="field"><label for="return_at">{{ _('Return') }}</label><input id="return_at" type="datetime-local" name="return_at" value="{{ form.get('return_at','') }}" required></div>
+  </div>
+  <h2>{{ _('Customer') }}</h2>
+  <div class="row2">
+    <div class="field"><label for="first_name">{{ _('First name') }}</label><input id="first_name" name="first_name" value="{{ form.get('first_name','') }}" required></div>
+    <div class="field"><label for="last_name">{{ _('Last name') }}</label><input id="last_name" name="last_name" value="{{ form.get('last_name','') }}"></div>
+  </div>
+  <div class="row2">
+    <div class="field"><label for="email">{{ _('Email') }}</label><input id="email" type="email" name="email" value="{{ form.get('email','') }}" required></div>
+    <div class="field"><label for="phone">{{ _('Phone') }}</label><input id="phone" type="tel" name="phone" value="{{ form.get('phone','') }}"></div>
+  </div>
+  <div class="row2">
+    <div class="field"><label for="vehicle_plate">{{ _('Plate') }}</label><input id="vehicle_plate" name="vehicle_plate" value="{{ form.get('vehicle_plate','') }}"></div>
+    <div class="field"><label for="vehicle_make">{{ _('Make') }}</label><input id="vehicle_make" name="vehicle_make" value="{{ form.get('vehicle_make','') }}"></div>
+  </div>
+  <div class="field"><label for="vehicle_model">{{ _('Model') }}</label><input id="vehicle_model" name="vehicle_model" value="{{ form.get('vehicle_model','') }}"></div>
+  {% if extras %}<fieldset class="pay-choice"><legend>{{ _('Extras') }}</legend>
+    {% for e in extras %}<label class="pay-option"><input type="checkbox" name="extra_{{ e.id }}" {% if form.get('extra_' ~ e.id) %}checked{% endif %}><span>{{ e.name }} · {{ '%.2f'|format(e.price) }}{{ _(' / person') if e.per_person }}</span></label>
+    {% if e.per_person %}<input name="qty_{{ e.id }}" type="number" min="1" max="{{ e.max_persons or 20 }}" value="{{ form.get('qty_' ~ e.id, 1) }}" aria-label="{{ _('Passengers') }}" title="{{ _('Passengers') }}" style="width:5rem">{% endif %}
+    <input name="details_{{ e.id }}" placeholder="{{ _('Details (flight, passengers …)') }}" maxlength="255" value="{{ form.get('details_' ~ e.id,'') }}">{% endfor %}
+  </fieldset>{% endif %}
+  <h2>{{ _('Price and payment') }}</h2>
+  <div class="row2">
+    <div class="field"><label for="price">{{ _('Parking price (leave empty to use the price rules)') }}</label><input id="price" name="price" inputmode="decimal" value="{{ form.get('price','') }}"></div>
+    <div class="field"><label for="payment_status">{{ _('Payment') }}</label><select id="payment_status" name="payment_status"><option value="pending">{{ _('Pay at arrival') }}</option><option value="paid" {% if form.get('payment_status') == 'paid' %}selected{% endif %}>{{ _('Already paid') }}</option></select></div>
+  </div>
+  <div class="field"><label for="notes">{{ _('Notes') }}</label><textarea id="notes" name="notes" maxlength="2000">{{ form.get('notes','') }}</textarea></div>
+  <label class="check"><input type="checkbox" name="send_email" value="1" checked><span>{{ _('Email the confirmation (with PDF) to the customer') }}</span></label>
+  <p class="actions"><button class="btn btn-primary">{{ _('Create booking') }}</button> <a class="btn" href="{{ url_for('admin.bookings') }}">{{ _('Cancel') }}</a></p>
+</form>
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% from "public/_icons.html" import icon %}
+{% block body_class %}booking-page{% endblock %}
+{% block body %}
+{% set cancelled = booking.status == 'cancelled' %}
+<main id="main" class="flow ticket-page" data-copied="{{ t(locale, 'ticket.copied') }}">
+  <div class="flow-band confirm-band{% if cancelled %} is-cancelled{% else %} is-success{% endif %}">
+    <div class="flow-inner">
+      {% include "public/_topbar.html" %}
+      <div class="confirm-hero">
+        <span class="hero-check" aria-hidden="true">{{ icon('x' if cancelled else 'check') }}</span>
+        <div class="confirm-hero-text">
+          <h1>{% if cancelled %}{{ t(locale, 'checkout.complete_title') }}{% else %}{{ t(locale, 'confirm.success') }}{% endif %}</h1>
+          <p class="lead">{{ t(locale, 'checkout.reference') }}: <strong class="ref">{{ booking.booking_ref }}</strong>
+            {% if cancelled %}<span class="badge s-blocked">{{ t(locale, 'checkout.cancelled') }}</span>
+            {% elif booking.payment_status == 'paid' %}<span class="badge s-active">{{ t(locale, 'checkout.status_paid') }}</span>
+            {% elif payment and payment.provider == 'stripe' %}<span class="badge s-optional">{{ t(locale, 'checkout.status_pending') }}</span>
+            {% else %}<span class="badge s-optional">{{ t(locale, 'checkout.status_arrival') }}</span>{% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="flow-inner flow-body">
+    {% include "public/_flashes.html" %}
+    <div class="confirm-stack">
+      <section class="ticket" aria-label="{{ t(locale, 'checkout.complete_title') }}">
+        <header class="ticket-top">
+          <span class="ticket-lot">{{ icon('car') }}<span>{{ lot.name }}{% if lot.city %} · {{ lot.city }}{% endif %}</span></span>
+          <span class="ticket-space">{{ t(locale, 'hold.space') }} <strong>{{ space.name }}</strong></span>
+        </header>
+        <div class="ticket-body">
+          <div class="ticket-main">
+            <div class="trip">
+              <div class="trip-end"><span class="trip-k">{{ t(locale, 'hold.pickup') }}</span><strong class="trip-t">{{ pickup_local.strftime("%H:%M") }}</strong><span class="trip-d">{{ pickup_local.strftime("%d.%m.%Y") }}</span></div>
+              <div class="trip-mid" aria-hidden="true"><span>{{ t(locale, 'ticket.days', n=duration_days) if duration_days > 1 else t(locale, 'ticket.day') }}</span></div>
+              <div class="trip-end"><span class="trip-k">{{ t(locale, 'hold.return') }}</span><strong class="trip-t">{{ return_local.strftime("%H:%M") }}</strong><span class="trip-d">{{ return_local.strftime("%d.%m.%Y") }}</span></div>
+            </div>
+            <dl class="ticket-facts">
+              {% if booking.vehicle %}<div><dt>{{ t(locale, 'checkout.plate') }}</dt><dd>{{ booking.vehicle.plate }}</dd></div>{% endif %}
+              <div><dt>{{ t(locale, 'checkout.heading') }}</dt><dd>{{ booking.customer.first_name }} {{ booking.customer.last_name }}</dd></div>
+              {% for e in booking.extras if e.status != 'cancelled' %}<div><dt>{{ t(locale, 'extras.title') }}</dt><dd>{{ e.name }}{% if (e.quantity or 1) > 1 %} × {{ e.quantity }}{% endif %}{% if e.details %}<small> · {{ e.details }}</small>{% endif %}</dd></div>{% endfor %}
+              <div class="total"><dt>{{ t(locale, 'hold.total') }}</dt><dd>{{ "%.2f"|format(booking.total_amount) }} {{ booking.currency }}</dd></div>
+            </dl>
+            <div class="ticket-actions">
+              <a class="btn btn-primary" href="{{ url_for('checkout.booking_pdf', token=token) }}">{{ t(locale, 'ticket.pdf') }}</a>
+              <button class="btn" type="button" id="open-qr-2">{{ t(locale, 'ticket.show') }}</button>
+              <a class="btn" href="{{ url_for('checkout.calendar_ics', token=token) }}">{{ t(locale, 'ticket.calendar') }}</a>
+              <a class="btn" href="{{ directions_url }}" target="_blank" rel="noopener">{{ t(locale, 'ticket.directions') }}</a>
+              <a class="btn" href="{{ url_for('checkout.qr_png', token=token) }}">{{ t(locale, 'ticket.download') }}</a>
+              {% if has_invoice %}<a class="btn" href="{{ url_for('checkout.invoice_pdf', token=token) }}">{{ t(locale, 'invoice.download') }}</a>{% endif %}
+              {% if has_credit_note %}<a class="btn" href="{{ url_for('checkout.credit_note_pdf', token=token) }}">{{ t(locale, 'invoice.download_credit') }}</a>{% endif %}
+            </div>
+          </div>
+          <div class="ticket-stub">
+            <button type="button" class="qr-tile" id="open-qr" aria-label="{{ t(locale, 'ticket.show') }}">
+              <span class="qr" role="img" aria-label="QR {{ booking.booking_ref }}">{{ qr_svg|safe }}</span>
+            </button>
+            <span class="ref" id="booking-ref">{{ booking.booking_ref }}</span>
+            <button class="btn btn-quiet" type="button" id="copy-ref">{{ t(locale, 'ticket.copy') }}</button>
+            <p class="fine-print qr-hint">{{ t(locale, 'ticket.hint') }}</p>
+            {% if dev_hint %}<p class="fine-print dev-hint">Local test: a phone can only open this QR if it is on the same Wi-Fi and the server was started with <code>--host 0.0.0.0</code>.</p>{% endif %}
+          </div>
+        </div>
+      </section>
+      <section class="panel next-panel">
+        {% if not cancelled %}
+        <h2>{{ t(locale, 'confirm.next.title') }}</h2>
+        <ol class="next-steps">
+          <li><span class="step-n">{{ icon('qr') }}</span>{{ t(locale, 'confirm.next.1') }}</li>
+          <li><span class="step-n">{{ icon('car') }}</span>{{ t(locale, 'confirm.next.2') }}</li>
+          <li><span class="step-n">{{ icon('bus') }}</span>{{ t(locale, 'confirm.next.3') }}</li>
+        </ol>
+        {% endif %}
+        <p class="fine-print">{{ t(locale, 'checkout.policy') }}</p>
+        <div class="actions">
+          {% if payment and payment.provider == 'stripe' and booking.payment_status == 'pending' and booking.status == 'reserved' and payment.checkout_url %}
+          <a class="btn btn-primary" href="{{ payment.checkout_url }}">{{ t(locale, 'checkout.card_resume') }}</a>{% endif %}
+          {% if can_cancel %}
+          <form method="post" class="inline" action="{{ url_for('checkout.localized_cancel', locale=locale, token=token) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-danger" type="submit">{{ t(locale, 'checkout.cancel') }}</button>
+          </form>{% endif %}
+        </div>
+      </section>
+    </div>
+  </div>
+  <dialog id="qr-dialog" class="qr-dialog" aria-label="{{ t(locale, 'ticket.show') }}">
+    <div class="qr-big">{{ qr_svg|safe }}</div>
+    <p class="qr-big-ref">{{ booking.booking_ref }}</p>
+    <button class="btn btn-primary" type="button" id="close-qr">{{ t(locale, 'ticket.close') }}</button>
+  </dialog>
+</main>
+{% include "public/_footer.html" %}
+<script src="{{ url_for('static', filename='js/booking-ticket.js') }}" defer></script>
+{% endblock %}

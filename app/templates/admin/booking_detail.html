@@ -1,0 +1,88 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Booking %(p0)s - ParkPilot', p0=(booking.booking_ref)) }}{% endblock %}
+{% macro post_btn(url, label, cls='btn', confirm='') %}<form method="post" class="inline" action="{{ url }}"{% if confirm %} data-confirm="{{ confirm }}"{% endif %}><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="{{ cls }}">{{ label }}</button></form>{% endmacro %}
+{% block content %}
+<p><a href="{{ url_for('admin.bookings') }}">{{ _('← Bookings') }}</a></p>
+<div class="head"><div><h1>{{ booking.booking_ref }}</h1>
+  <p class="muted">{{ _('%(p0)s · payment %(p1)s · %(p2)s %(p3)s', p0=(booking.status|replace('_',' ')|title|tr), p1=(booking.payment_status|title|tr), p2=('%.2f'|format(booking.total_amount)), p3=(booking.currency)) }}</p></div>
+  <p class="actions">
+    <a class="btn" href="{{ url_for('checkout.booking_pdf', token=token) }}">{{ _('PDF ticket') }}</a>
+    {% if booking.status != 'cancelled' or invoice %}<a class="btn btn-primary" href="{{ url_for('manage.booking_invoice_pdf', booking_id=booking.id) }}">{{ _('Download invoice (PDF)') if invoice else _('Generate invoice (PDF)') }}</a>{% endif %}
+    {% if credit_note %}<a class="btn" href="{{ url_for('manage.booking_credit_note_pdf', booking_id=booking.id) }}">{{ _('Credit note (PDF)') }}</a>{% endif %}
+    <a class="btn" href="{{ url_for('manage.booking_key_tag', booking_id=booking.id) }}" target="_blank" rel="noopener">{{ _('Print key tag') }}</a>
+    <a class="btn" href="{{ url_for('checkout.localized_booking_page', locale=booking.customer.locale, token=token) }}" target="_blank" rel="noopener">{{ _('Customer page') }}</a>
+    {{ post_btn(url_for('manage.booking_resend', booking_id=booking.id), _('Email to customer')) }}
+  </p></div>
+
+<section class="panel"><h2>{{ _('Status') }}</h2><p class="actions">
+  {% if booking.status == 'reserved' %}{{ post_btn(url_for('manage.booking_action', booking_id=booking.id, action='check-in'), _('Check in'), 'btn btn-primary') }}{% endif %}
+  {% if booking.status == 'checked_in' %}{{ post_btn(url_for('manage.booking_action', booking_id=booking.id, action='check-out'), _('Check out'), 'btn btn-primary') }}{% endif %}
+  {% if booking.status in ('reserved','checked_in') %}{{ post_btn(url_for('manage.booking_action', booking_id=booking.id, action='cancel'), _('Cancel booking'), 'btn btn-danger', _('Cancel this booking? Card payments are refunded.')) }}{% endif %}
+  <a class="btn" href="{{ url_for('staff.booking_detail', booking_id=booking.id) }}">{{ _('Open in staff app') }}</a>
+  {% if booking.status in ('cancelled','reserved') %}{{ post_btn(url_for('manage.booking_delete', booking_id=booking.id), _('Delete'), 'btn btn-danger', _('Delete this booking permanently, including its inspection photos?')) }}{% endif %}
+</p></section>
+
+<section class="panel"><h2>{{ _('Payment') }}</h2>
+  <form method="post" class="inline-form" action="{{ url_for('manage.booking_payment', booking_id=booking.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>{{ _('Status') }} <select name="status">{% for s in ('pending','paid','failed','refunded') %}<option value="{{ s }}" {% if payment and payment.status == s %}selected{% endif %}>{{ s|title|tr }}</option>{% endfor %}</select></label>
+    <button class="btn">{{ _('Update') }}</button> <span class="muted">{{ payment.provider if payment else _('No payment record') }}</span>
+  </form></section>
+
+<section class="panel"><h2>{{ _('Customer and vehicle') }}</h2>
+  <form method="post" class="form" action="{{ url_for('manage.booking_update', booking_id=booking.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row2"><div class="field"><label for="first_name">{{ _('First name') }}</label><input id="first_name" name="first_name" value="{{ booking.customer.first_name }}" required></div>
+      <div class="field"><label for="last_name">{{ _('Last name') }}</label><input id="last_name" name="last_name" value="{{ booking.customer.last_name }}"></div></div>
+    <div class="row2"><div class="field"><label for="email">{{ _('Email') }}</label><input id="email" type="email" name="email" value="{{ booking.customer.email }}"></div>
+      <div class="field"><label for="phone">{{ _('Phone') }}</label><input id="phone" name="phone" value="{{ booking.customer.phone }}"></div></div>
+    <div class="row2"><div class="field"><label for="company">{{ _('Company') }}</label><input id="company" name="company" value="{{ booking.customer.company }}"></div>
+      <div class="field"><label for="billing_email">{{ _('Billing email') }}</label><input id="billing_email" name="billing_email" value="{{ booking.customer.billing_email }}"></div></div>
+    <div class="row2"><div class="field"><label for="vehicle_plate">{{ _('Plate') }}</label><input id="vehicle_plate" name="vehicle_plate" value="{{ booking.vehicle.plate if booking.vehicle else '' }}"></div>
+      <div class="field"><label for="vehicle_make">{{ _('Make') }}</label><input id="vehicle_make" name="vehicle_make" value="{{ booking.vehicle.make if booking.vehicle else '' }}"></div></div>
+    <div class="row2"><div class="field"><label for="vehicle_model">{{ _('Model') }}</label><input id="vehicle_model" name="vehicle_model" value="{{ booking.vehicle.model if booking.vehicle else '' }}"></div>
+      <div class="field"><label for="vehicle_color">{{ _('Colour') }}</label><input id="vehicle_color" name="vehicle_color" value="{{ booking.vehicle.color if booking.vehicle else '' }}"></div></div>
+    <div class="field"><label for="notes">{{ _('Notes') }}</label><textarea id="notes" name="notes">{{ booking.notes }}</textarea></div>
+    <button class="btn btn-primary">{{ _('Save details') }}</button>
+  </form></section>
+
+<section class="panel"><h2>{{ _('Invoice and customer notices') }}</h2>
+  {% if invoice %}<p>{{ _('Invoice') }} <strong>{{ invoice.number }}</strong> {{ _('· %(p0)s · %(p1)s %(p2)s incl. %(p3)s VAT (%(p4)s %%)', p0=(invoice.status|title|tr), p1=('%.2f'|format(invoice.gross_amount)), p2=(invoice.currency), p3=('%.2f'|format(invoice.vat_amount)), p4=(invoice.vat_rate)) }}{% if credit_note %} {{ _('· Credit note') }} <strong>{{ credit_note.number }}</strong>{% endif %}</p>
+  {% else %}<p class="muted">{{ _('No invoice has been issued yet. It is created automatically when the booking is confirmed or when you open the PDF.') }}</p>{% endif %}
+  <p class="actions">
+    {% if booking.payment_status == 'paid' %}{{ post_btn(url_for('manage.booking_resend_event', booking_id=booking.id, event='paid'), _('Resend payment receipt')) }}{% endif %}
+    {% if booking.status == 'cancelled' %}{{ post_btn(url_for('manage.booking_resend_event', booking_id=booking.id, event='cancelled'), _('Resend cancellation')) }}{% endif %}
+    {% if credit_note %}{{ post_btn(url_for('manage.booking_resend_event', booking_id=booking.id, event='refunded'), _('Resend refund / credit note')) }}{% endif %}
+    {% if booking.status == 'checked_out' %}{{ post_btn(url_for('manage.booking_resend_event', booking_id=booking.id, event='checked_out'), _('Resend check-out invoice')) }}{% endif %}
+    {% if booking.status == 'reserved' %}{{ post_btn(url_for('manage.booking_resend_event', booking_id=booking.id, event='reminder'), _('Send arrival reminder')) }}{% endif %}
+  </p>
+  {% if notifications %}<div class="table-wrap"><table><thead><tr><th>{{ _('When') }}</th><th>{{ _('Notice') }}</th><th>{{ _('Channel') }}</th><th>{{ _('To') }}</th><th>{{ _('Result') }}</th></tr></thead><tbody>
+  {% for n in notifications %}<tr><td class="nowrap">{{ n.created_at.strftime('%Y-%m-%d %H:%M') }}</td><td>{{ n.event|replace('_',' ')|title|tr }}</td><td>{{ n.channel|upper if n.channel != 'whatsapp' else 'WhatsApp' }}</td><td>{{ n.recipient }}</td><td>{{ n.status|title|tr }}{% if n.error %}<small class="sub">{{ n.error }}</small>{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>{% else %}<p class="muted">{{ _('No customer notices have been logged for this booking yet.') }}</p>{% endif %}
+</section>
+
+{% if booking.status in ('reserved','checked_in') %}
+<section class="panel"><h2>{{ _('Change dates or space') }}</h2>
+  <form method="post" class="form" action="{{ url_for('manage.booking_reschedule', booking_id=booking.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row2"><div class="field"><label for="pickup_at">{{ _('Pick-up') }}</label><input id="pickup_at" type="datetime-local" name="pickup_at" value="{{ pickup_value }}" required></div>
+      <div class="field"><label for="return_at">{{ _('Return') }}</label><input id="return_at" type="datetime-local" name="return_at" value="{{ return_value }}" required></div></div>
+    <div class="field"><label for="space_id">{{ _('Space') }}</label><select id="space_id" name="space_id">{% for s in spaces %}<option value="{{ s.id }}" {% if s.id == booking.space_id %}selected{% endif %}>{{ s.name }} ({{ s.kind }})</option>{% endfor %}</select></div>
+    <label class="check"><input type="checkbox" name="reprice" value="1"><span>{{ _('Recalculate the parking price for the new dates') }}</span></label>
+    <button class="btn btn-primary">{{ _('Move booking') }}</button>
+  </form></section>
+{% endif %}
+
+<section class="panel"><h2>{{ _('Extras') }}</h2>
+  {% if booking.extras %}<div class="table-wrap"><table><thead><tr><th>{{ _('Extra') }}</th><th>{{ _('Details') }}</th><th>{{ _('Price') }}</th><th>{{ _('Status') }}</th><th></th></tr></thead><tbody>
+  {% for e in booking.extras %}<tr><td>{{ e.name }}</td><td>{{ e.details }}</td><td>{{ '%.2f'|format(e.total()) }}{% if e.included_persons %} <small class="muted">({{ _('%(p0)s persons: %(p1)s included, %(p2)s additional', p0=(e.quantity), p1=(e.included_persons), p2=(e.additional_persons)) }})</small>{% elif (e.quantity or 1) > 1 %} <small class="muted">({{ e.quantity }} × {{ '%.2f'|format(e.unit_price) }})</small>{% endif %}</td><td>{{ e.status|title|tr }}</td>
+    <td>{% if e.status == 'requested' %}{{ post_btn(url_for('manage.booking_extra_op', booking_id=booking.id, row_id=e.id, op='done'), _('Mark done')) }}{% elif e.status == 'done' %}{{ post_btn(url_for('manage.booking_extra_op', booking_id=booking.id, row_id=e.id, op='reopen'), _('Reopen')) }}{% endif %}
+      {{ post_btn(url_for('manage.booking_extra_op', booking_id=booking.id, row_id=e.id, op='remove'), _('Remove'), 'btn btn-danger', _('Remove this extra and its price?')) }}</td></tr>{% endfor %}
+  </tbody></table></div>{% else %}<p class="muted">{{ _('No extras on this booking.') }}</p>{% endif %}
+  {% if extras %}<form method="post" class="inline-form" action="{{ url_for('manage.booking_extra_add', booking_id=booking.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <select name="extra_id">{% for e in extras %}<option value="{{ e.id }}">{{ e.name }} · {{ '%.2f'|format(e.price) }}{{ _(' / person') if e.per_person }}</option>{% endfor %}</select>
+    <input name="quantity" type="number" min="1" max="20" value="1" aria-label="{{ _('Passengers') }}" title="{{ _('Passengers (per-person extras)') }}" style="width:5rem">
+    <input name="details" placeholder="{{ _('Details (flight, passengers …)') }}" maxlength="255"><button class="btn">{{ _('Add extra') }}</button></form>{% endif %}
+</section>
+{% endblock %}
