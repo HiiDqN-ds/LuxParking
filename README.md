@@ -20,6 +20,7 @@ flask --app wsgi seed           # tenant + owner + lot + 50 spaces (idempotent)
 flask --app wsgi run --debug    # http://127.0.0.1:5000/admin/login
 pytest
 ```
+On Windows, from the `parkpilot` folder, you can also start the local development server with `python app.py`.
 
 ## Deploy to Render
 1. Push this folder to a GitHub repo.
