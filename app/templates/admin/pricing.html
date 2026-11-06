@@ -1,7 +1,7 @@
 {% extends "admin/base.html" %}
 {% block title %}{{ _('Pricing rules - ParkPilot') }}{% endblock %}
 {% block content %}
-<div class="head"><div><h1><span class="h-ico" aria-hidden="true">💶</span> {{ _('Advanced pricing') }}</h1><p class="muted">{{ _('The matching rule with the highest priority prices the whole stay. Ties prefer a space-specific rule, then the oldest rule.') }}</p></div></div>
+<div class="head"><div><h1><span class="h-ico" aria-hidden="true">💶</span> {{ _('Advanced pricing') }}</h1><p class="muted">{{ _('For non-EUR lots, the matching rule with the highest priority prices the whole stay. Ties prefer a space-specific rule, then the oldest rule.') }}</p><p class="muted">{{ _('EUR lots use the global tariff: EUR 50 total for stays under 7 days and EUR 10 per started day from 7 days. Custom price rules apply only to other currencies.') }}</p></div></div>
 <section class="panel">
   <h2>{{ _('Add a pricing rule') }}</h2>
   <form method="post" class="form">

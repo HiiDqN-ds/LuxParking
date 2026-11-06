@@ -1,7 +1,7 @@
 """Hold -> checkout -> booking page -> cancel, through the public routes."""
 from datetime import datetime, timedelta, timezone
 
-from app.models import Lot, PriceRule, Space, Tenant
+from app.models import Booking, Lot, PriceRule, Space, Tenant
 from app.extensions import db
 
 
@@ -29,6 +29,7 @@ def test_checkout_creates_booking_and_allows_cancel(client, app):
     assert resp.status_code == 302 and "/booking/" in resp.headers["Location"]
     view = client.get(resp.headers["Location"])
     assert view.status_code == 200 and b"<svg" in view.data
+    assert Booking.query.one().total_amount == 50
     cancel = client.post(resp.headers["Location"].rstrip("/") + "/cancel")
     assert cancel.status_code == 302
 

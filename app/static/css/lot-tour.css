@@ -26,7 +26,8 @@
 .lt-steps{list-style:none;display:flex;gap:.5rem;margin:.75rem 0 0;padding:0;flex-wrap:wrap}
 .lt-steps[hidden],.lt-ui[hidden]{display:none}
 .lt-steps button{border:1px solid var(--line,#D5DBDF);background:var(--surface,#fff);color:var(--ink,#14212B);border-radius:999px;padding:.4rem .9rem;cursor:pointer;font:inherit;font-size:.9rem;position:relative;overflow:hidden}
-.lt-steps button[aria-current=true]{border-color:var(--lt-brand);background:var(--lt-brand);color:var(--brand-ink,#fff)}
+.lt-steps button[aria-current=true]{border-color:#E0B44C;background:#E0B44C;color:#14212B}
+.lt-steps button:hover:not([aria-current=true]){border-color:var(--lt-brand);background:rgba(255,255,255,.08);color:#EAF2F5}
 @media (prefers-reduced-motion:reduce){.lot-tour.is-tour .lt-scene.is-on img{animation:none}.lot-tour.is-tour .lt-scene{transition:none}}
 
 /* responsive: phone + tablet */

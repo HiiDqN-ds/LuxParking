@@ -90,6 +90,89 @@
     return "queued";
   }
 
+  function extractVideoFrame(file) {
+    return new Promise((resolve, reject) => {
+      const source = URL.createObjectURL(file);
+      const player = document.createElement("video");
+      player.preload = "metadata";
+      player.muted = true;
+      player.playsInline = true;
+      const cleanUp = () => URL.revokeObjectURL(source);
+      player.onerror = () => { cleanUp(); reject(new Error(ppT("Could not read this video."))); };
+      player.onloadedmetadata = () => {
+        if (!Number.isFinite(player.duration) || player.duration <= 0 || player.duration > 30) {
+          cleanUp();
+          reject(new Error(ppT("Choose a video that is 30 seconds or shorter.")));
+          return;
+        }
+        player.currentTime = Math.min(1, player.duration / 2);
+      };
+      player.onseeked = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = player.videoWidth;
+        canvas.height = player.videoHeight;
+        const context = canvas.getContext("2d");
+        if (!context || !canvas.width || !canvas.height) {
+          cleanUp();
+          reject(new Error(ppT("Could not create a comparison frame from this video.")));
+          return;
+        }
+        context.drawImage(player, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+          cleanUp();
+          if (!blob) {
+            reject(new Error(ppT("Could not create a comparison frame from this video.")));
+            return;
+          }
+          resolve(new File([blob], "video-frame.webp", { type: "image/webp" }));
+        }, "image/webp", 0.82);
+      };
+      player.src = source;
+    });
+  }
+
+  async function uploadVideoCapture(videoForm, file, status) {
+    const category = videoForm.querySelector('[name="category"]')?.value || "";
+    const frameForm = videoForm.closest(".video-evidence-card")?.querySelector("[data-frame-form]");
+    if (!category || !frameForm) throw new Error(ppT("Could not prepare this video for upload."));
+    const csrfToken = videoForm.querySelector('[name="csrf_token"]').value;
+    const frame = await extractVideoFrame(file);
+    const frameResult = await uploadEvidence({
+      form: frameForm,
+      file: frame,
+      category,
+      url: frameForm.action,
+      csrfToken,
+      status,
+      reload: false,
+    });
+    const videoId = await window.ParkPilotInspectionQueue.enqueue({
+      url: videoForm.action,
+      fields: {
+        csrf_token: csrfToken,
+        category,
+        captured_at: new Date().toISOString(),
+      },
+      blob: file,
+      filename: file.name || `${category}.video`,
+      fileField: "video",
+    });
+    let videoResult = null;
+    if (navigator.onLine) {
+      const outcomes = await window.ParkPilotInspectionQueue.flush();
+      videoResult = outcomes.find((outcome) => outcome.id === videoId);
+      if (videoResult && !videoResult.ok && status) status.textContent = videoResult.message;
+    }
+    await updateQueueCount();
+    if (frameResult === true && videoResult && videoResult.ok) {
+      if (status) status.textContent = ppT("Video saved.");
+      reloadAfterDraft();
+      return true;
+    }
+    if (status && !videoResult) status.textContent = ppT("Saved on this device; will upload when online.");
+    return "queued";
+  }
+
   async function updateQueueCount() {
     const element = document.getElementById("upload-queue-count");
     if (!element || !window.ParkPilotInspectionQueue) return;
@@ -138,6 +221,24 @@
         });
       } catch (error) {
         if (status) status.textContent = ppT("Could not save this image to the offline queue.");
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-video-form]").forEach((form) => {
+    const input = form.querySelector('input[type="file"][name="video"]');
+    const status = form.querySelector(".upload-state");
+    if (!input) return;
+    input.addEventListener("change", async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      if (status) status.textContent = ppT("Preparing video…");
+      try {
+        await uploadVideoCapture(form, file, status);
+      } catch (error) {
+        if (status) status.textContent = error.message || ppT("Could not save this video. Try again.");
+      } finally {
+        input.value = "";
       }
     });
   });
@@ -338,8 +439,11 @@
   function updateChecklist() {
     if (!checklist || !draftForm) return;
     const marks = Number(checklist.dataset.marks) || 0;
+    const videoCount = Number(checklist.dataset.videoCount) || 0;
+    const requiredVideos = Number(checklist.dataset.videoRequired) || 0;
     const confirmed = draftForm.elements.no_damage_confirmed.checked;
     const mark = (key, ok) => { const item = checklist.querySelector(`[data-key="${key}"]`); if (item) item.classList.toggle("is-done", ok); };
+    mark("videos", videoCount >= requiredVideos);
     mark("odometer", draftForm.elements.odometer_km.value.trim() !== "");
     mark("damage", marks > 0 ? !confirmed : confirmed);  // marks present: do not confirm "no damage"; none: confirm it
     const missing = [...checklist.querySelectorAll("li:not(.is-done)")].map((item) => item.textContent.trim());
@@ -435,14 +539,14 @@
       els.bar.value = required.filter((category) => done.has(category)).length;
       guided.hidden = false;
       if (!current) {
-        els.step.textContent = ppT("All photos captured");
+        els.step.textContent = ppT("All videos captured");
         els.title.textContent = ppT("Next: customer signature");
         els.hint.textContent = ppT("Scroll down to mark damage, collect the signature and complete the inspection.");
         els.button.hidden = true;
         return;
       }
       guided.dataset.current = current;
-      els.step.textContent = ppT("Photo %(current)s of %(total)s", { current: els.bar.value + 1, total: required.length });
+      els.step.textContent = ppT("Video %(current)s of %(total)s", { current: els.bar.value + 1, total: required.length });
       els.title.textContent = pretty(current);
       els.hint.textContent = hints[current] || "";
     }
@@ -450,22 +554,18 @@
       const file = els.input.files && els.input.files[0];
       const category = guided.dataset.current;
       if (!file || !category) return;
-      const form = document.querySelector(`[data-evidence-form] input[name="category"][value="${category}"]`)?.form;
+      const form = document.querySelector(`[data-video-form] input[name="category"][value="${category}"]`)?.form;
       if (!form) return;
-      els.status.textContent = ppT("Saving…");
+      els.status.textContent = ppT("Preparing video…");
       try {
-        const result = await uploadEvidence({
-          form, file, category, url: form.action,
-          csrfToken: form.querySelector('[name="csrf_token"]').value, status: els.status, reload: false,
-        });
+        const result = await uploadVideoCapture(form, file, els.status);
         if (result) {
           done.add(category);
           els.status.textContent = result === "queued" ? ppT("Saved on this device. It uploads when you are online.") : ppT("Saved.");
-          if (!nextCategory() && result === true) { reloadAfterDraft(); return; }
           render();
         }
       } catch (error) {
-        els.status.textContent = ppT("Could not save this photo. Try again.");
+        els.status.textContent = error.message || ppT("Could not save this video. Try again.");
       }
       els.input.value = "";
     });

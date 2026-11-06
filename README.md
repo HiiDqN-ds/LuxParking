@@ -4,7 +4,8 @@ Multi-tenant airport parking booking platform (Flask + PostgreSQL). The foundati
 covers tenant isolation, auth/roles, lot and space administration, configurable pricing,
 the initial booking/hold/payment lifecycle services, and a public live parking map with
 ten-minute space holds. Public pages support German, English, Dutch, French, Spanish,
-and Arabic with localized metadata, RTL layout, and a multilingual sitemap. The staff
+Arabic, and Turkish with localized metadata, RTL layout, and a multilingual sitemap.
+Turkish currently covers the core booking flow; untranslated catalog entries fall back to English. The staff
 app adds signed booking QR codes, required vehicle inspections, private photo evidence,
 damage disputes, and an offline photo-upload queue.
 
@@ -95,17 +96,21 @@ A lot's configured HTTPS or same-origin background image is rendered beneath its
 spaces. Availability notifications are emitted by the booking lifecycle services
 after successful commits, so hold, booking, cancellation, and check-out changes refresh
 every connected map in that lot's tenant-scoped room. Set `PUBLIC_TENANT_SLUG` to choose
-which tenant's lot the landing page promotes. Quotes use a positive per-space daily
-rate, falling back to the lot daily rate; each started 24-hour period is charged once.
-The highest-priority applicable `price_rule` overrides the base quote for the whole
-stay; ties prefer a space-specific rule, then the lowest rule ID. A weekend rule
-matches any overlap with Saturday or Sunday in the tenant timezone. Season and holiday
-rules require explicit start and end dates and match when the stay overlaps that date
-window. The `day` period matches any date. Rule amounts can be a flat total, per started
-24-hour period, or per started hour. Unconfigured rates are shown as such and cannot be
-held. Temporary holds do not create a confirmed booking or collect payment. The map
-uses Socket.IO notifications plus a 20-second availability refresh fallback. The
-default single threaded worker supports WebSockets; set
+which tenant's lot the landing page promotes. Every EUR lot uses the same global base
+tariff: stays shorter than seven actual 24-hour days cost EUR 50 total; stays of seven
+days or more cost EUR 10 per started 24-hour period. This tariff takes precedence over
+configured lot rates, space rates, and price rules. Extras are additional, and an
+applicable discount can reduce the total. Lots in other currencies continue to use a
+positive per-space daily rate, falling back to the lot daily rate; each started 24-hour
+period is charged once. Their highest-priority applicable `price_rule` overrides the
+base quote for the whole stay; ties prefer a space-specific rule, then the lowest rule
+ID. A weekend rule matches any overlap with Saturday or Sunday in the tenant timezone.
+Season and holiday rules require explicit start and end dates and match when the stay
+overlaps that date window. The `day` period matches any date. Rule amounts can be a flat
+total, per started 24-hour period, or per started hour. Unconfigured non-EUR rates are
+shown as such and cannot be held. Temporary holds do not create a confirmed booking or
+collect payment. The map uses Socket.IO notifications plus a 20-second availability
+refresh fallback. The default single threaded worker supports WebSockets; set
 `SOCKETIO_MESSAGE_QUEUE` to a shared Redis URL before increasing `WEB_CONCURRENCY` so
 availability notifications reach clients connected to other workers.
 
@@ -265,7 +270,7 @@ are at *Admin > Reports*.
 Public pages use the language in the URL (`/de/`, `/en/` ...). The owner back office, the staff app, login, error pages,
 flash messages, form labels, validation errors, the staff scripts, invoices, emails and the inspection PDF are all written in
 **one** language at a time: the visitor's choice (language switch, remembered in a cookie), otherwise the tenant's default
-language. Languages: de, en, nl, fr, es, ar (Arabic switches the page to right-to-left).
+language. Languages: de, en, nl, fr, es, ar, tr (Arabic switches the page to right-to-left).
 
 - Templates use `{{ _('English text') }}`, Python uses `ui('English text %(x)s', x=...)`; catalogs are `app/translations/ui/<locale>.json`.
 - A new language = one `ui/<locale>.json` file plus the locale in `SUPPORTED_LOCALES`. `flask --app wsgi i18n-missing --write`

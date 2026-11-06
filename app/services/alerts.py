@@ -137,7 +137,19 @@ def mark_all_read(user) -> None:
 def serialize(alert: Alert, url: str, user=None) -> dict:
     icon, colour, name = KINDS.get(alert.kind, ("🔔", "gray", ""))
     text = staff_alert_text(alert) if getattr(user, "role", None) == "staff" else alert_text(alert)
-    return {"id": alert.id, "kind": alert.kind, "icon": icon, "colour": colour, "text": text, "ago": time_ago(alert.created_at), "url": url}
+    created_at = alert.created_at
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    return {
+        "id": alert.id,
+        "kind": alert.kind,
+        "icon": icon,
+        "colour": colour,
+        "text": text,
+        "ago": time_ago(alert.created_at),
+        "created_at": created_at.isoformat(),
+        "url": url,
+    }
 
 
 def stats(tenant: Tenant) -> dict:

@@ -104,7 +104,9 @@ def test_staff_scripts_get_their_texts_in_the_page_language(client, app, staff):
     page = client.get("/staff/").get_data(as_text=True)
     assert "window.PP_UI" in page
     dictionary = json.loads(re.search(r"window\.PP_UI = (\{.*?\});</script>", page, re.S).group(1))
-    assert dictionary.get("Saving…") == "Wird gespeichert …"
+    assert dictionary.get(
+        "Scroll down to mark damage, collect the signature and complete the inspection."
+    ) == "Scrollen Sie nach unten, um Schäden zu markieren, die Unterschrift einzuholen und die Inspektion abzuschließen."
 
 
 # ---- no English left on any back-office or staff page --------------------------------------------

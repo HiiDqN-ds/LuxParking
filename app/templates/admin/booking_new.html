@@ -32,7 +32,7 @@
   </fieldset>{% endif %}
   <h2>{{ _('Price and payment') }}</h2>
   <div class="row2">
-    <div class="field"><label for="price">{{ _('Parking price (leave empty to use the price rules)') }}</label><input id="price" name="price" inputmode="decimal" value="{{ form.get('price','') }}"></div>
+    <div class="field"><label for="price">{{ _('Parking price override (EUR lots always use the global tariff)') }}</label><input id="price" name="price" inputmode="decimal" value="{{ form.get('price','') }}"></div>
     <div class="field"><label for="payment_status">{{ _('Payment') }}</label><select id="payment_status" name="payment_status"><option value="pending">{{ _('Pay at arrival') }}</option><option value="paid" {% if form.get('payment_status') == 'paid' %}selected{% endif %}>{{ _('Already paid') }}</option></select></div>
   </div>
   <div class="field"><label for="notes">{{ _('Notes') }}</label><textarea id="notes" name="notes" maxlength="2000">{{ form.get('notes','') }}</textarea></div>

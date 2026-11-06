@@ -68,10 +68,13 @@ def clear_cache() -> None:
 def ui_locale() -> str:
     """The language the current page must be written in."""
     if not has_app_context():
-        return current_app.config.get("DEFAULT_LOCALE", "de")
+        return "en"
+    if not has_request_context():
+        return current_app.config.get("UI_FORCE_LOCALE", "en")
+    active_request = request._get_current_object()
     cached = g.get("_ui_locale")
-    if cached:
-        return cached
+    if active_request is not None and cached is not None and cached[0] is active_request:
+        return cached[1]
     chosen = None
     if has_request_context():
         view_locale = (request.view_args or {}).get("locale")
@@ -84,7 +87,8 @@ def ui_locale() -> str:
         if not chosen and current_user.is_authenticated and getattr(current_user, "tenant", None) is not None:
             chosen = current_user.tenant.default_locale
     locale = normalize_locale(chosen)
-    g._ui_locale = locale
+    if active_request is not None:
+        g._ui_locale = (active_request, locale)
     return locale
 
 

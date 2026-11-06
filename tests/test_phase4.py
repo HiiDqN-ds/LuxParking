@@ -41,15 +41,15 @@ def test_home_and_reservation_page_show_configured_lot(client, public_lot):
     assert b"Hold this space for 10 minutes" in response.data
 
 
-def test_availability_price_uses_space_then_lot_daily_rate(app, client, public_lot):
+def test_availability_uses_global_eur_fare_for_all_spaces(app, client, public_lot):
     tenant_slug, lot_slug, tenant_id, _, fallback_space_id, override_space_id = public_lot
     start, end = interval()
     response = client.get(availability_url(tenant_slug, lot_slug, start, end))
 
     assert response.status_code == 200
     spaces = {space["id"]: space for space in response.json["spaces"]}
-    assert spaces[fallback_space_id]["price"] == "15.00"
-    assert spaces[override_space_id]["price"] == "27.00"
+    assert spaces[fallback_space_id]["price"] == "50.00"
+    assert spaces[override_space_id]["price"] == "50.00"
     assert spaces[fallback_space_id]["selectable"] is True
 
     with use_tenant(tenant_id):
@@ -59,10 +59,10 @@ def test_availability_price_uses_space_then_lot_daily_rate(app, client, public_l
     longer_end = start + timedelta(hours=25)
     longer = client.get(availability_url(tenant_slug, lot_slug, start, longer_end))
     longer_spaces = {space["id"]: space for space in longer.json["spaces"]}
-    assert longer_spaces[override_space_id]["price"] == "54.00"
+    assert longer_spaces[override_space_id]["price"] == "50.00"
 
 
-def test_zero_rate_is_not_presented_as_a_free_reservation(client):
+def test_eur_tariff_applies_even_when_configured_base_rates_are_zero(client):
     tenant = Tenant.query.filter_by(slug="duesseldorf-airport-parking").one()
     with use_tenant(tenant.id):
         lot = Lot.query.first()
@@ -75,12 +75,12 @@ def test_zero_rate_is_not_presented_as_a_free_reservation(client):
     start, end = interval()
     response = client.get(availability_url(tenant_slug, lot_slug, start, end))
     space_state = next(item for item in response.json["spaces"] if item["id"] == space.id)
-    assert space_state["price"] is None
-    assert space_state["selectable"] is False
-    assert "Pricing has not been configured" in space_state["price_error"]
+    assert space_state["price"] == "50.00"
+    assert space_state["selectable"] is True
+    assert space_state["price_error"] is None
 
 
-def test_public_hold_rejects_unconfigured_price(client):
+def test_public_hold_uses_eur_tariff_without_configured_base_rates(client):
     tenant = Tenant.query.filter_by(slug="duesseldorf-airport-parking").one()
     with use_tenant(tenant.id):
         lot = Lot.query.first()
@@ -102,9 +102,10 @@ def test_public_hold_rejects_unconfigured_price(client):
     )
     assert response.status_code == 302
     with use_tenant(tenant.id):
-        assert Hold.query.filter_by(lot_id=lot.id).count() == 0
+        hold = Hold.query.filter_by(lot_id=lot.id).one()
     page = client.get(response.headers["Location"])
-    assert b"Pricing has not been configured" in page.data
+    assert page.status_code == 200 and b"checkout-form" in page.data
+    assert str(hold.id).encode() in response.headers["Location"].encode()
 
 
 def test_availability_marks_overlapping_booking_and_later_release(app, client, public_lot):

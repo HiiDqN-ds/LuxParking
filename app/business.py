@@ -16,7 +16,7 @@ DEFAULTS = {
     "country": "DE",
     "airport": "Düsseldorf Airport (DUS)",
     "phone": "+49 151 55886444",
-    "email": "luxuryparkinglp@gmail.com",
+    "email": "info@luxuryparking.de",
     "maps_url": "https://maps.app.goo.gl/vNBXpdmGuSqMpBLb7",
     "instagram": "https://www.instagram.com/luxuryparkinglp",
     "facebook": "https://www.facebook.com/luxuryparkinglp",

@@ -673,6 +673,7 @@ class Inspection(TenantMixin, db.Model):
     booking = db.relationship("Booking")
     staff_user = db.relationship("User")
     photos = db.relationship("InspectionPhoto", back_populates="inspection", cascade="all, delete-orphan")
+    videos = db.relationship("InspectionVideo", back_populates="inspection", cascade="all, delete-orphan")
     damage_marks = db.relationship(
         "DamageMark",
         foreign_keys="DamageMark.inspection_id",
@@ -714,6 +715,31 @@ class InspectionPhoto(TenantMixin, db.Model):
         UniqueConstraint("tenant_id", "inspection_id", "category", name="uq_inspection_photo_tenant_category"),
         CheckConstraint("size_bytes > 0", name="ck_inspection_photo_size"),
         CheckConstraint("length(sha256) = 64", name="ck_inspection_photo_sha256"),
+    )
+
+
+class InspectionVideo(TenantMixin, db.Model):
+    __tablename__ = "inspection_videos"
+    id = db.Column(db.Integer, primary_key=True)
+    inspection_id = db.Column(db.Integer, db.ForeignKey("inspections.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = db.Column(db.String(80), nullable=False)
+    object_key = db.Column(db.String(500), nullable=False, unique=True)
+    sha256 = db.Column(db.String(64), nullable=False)
+    content_type = db.Column(db.String(40), nullable=False)
+    size_bytes = db.Column(db.Integer, nullable=False)
+    booking_ref = db.Column(db.String(32), nullable=False)
+    staff_user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    staff_name = db.Column(db.String(120), nullable=False)
+    captured_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    uploaded_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+
+    inspection = db.relationship("Inspection", back_populates="videos")
+    staff_user = db.relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "inspection_id", "category", name="uq_inspection_video_tenant_category"),
+        CheckConstraint("size_bytes > 0", name="ck_inspection_video_size"),
+        CheckConstraint("length(sha256) = 64", name="ck_inspection_video_sha256"),
     )
 
 
@@ -892,12 +918,90 @@ class Alert(TenantMixin, db.Model):
     __table_args__ = (CheckConstraint(_in("kind", ALERT_KINDS), name="ck_alert_kind"),)
 
 
+EXTERNAL_INTEGRATION_PROVIDERS = ("parkos", "parkenlist")
+INTEGRATION_CONNECTION_STATUSES = ("pending", "active", "syncing", "error", "disabled")
+INTEGRATION_SYNC_DIRECTIONS = ("import", "export")
+INTEGRATION_SYNC_STATUSES = ("running", "succeeded", "partial", "failed")
+
+
+class ExternalIntegrationConnection(TenantMixin, db.Model):
+    """Provider connection metadata only; credentials are resolved server-side from an opaque reference."""
+    __tablename__ = "external_integration_connections"
+    id = db.Column(db.Integer, primary_key=True)
+    provider = db.Column(db.String(20), nullable=False)
+    status = db.Column(db.String(12), nullable=False, default="pending")
+    credential_ref = db.Column(db.String(255))
+    last_sync_at = db.Column(db.DateTime(timezone=True))
+    last_error = db.Column(db.String(500), nullable=False, default="")
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "provider", name="uq_external_integration_tenant_provider"),
+        CheckConstraint(_in("provider", EXTERNAL_INTEGRATION_PROVIDERS), name="ck_external_integration_provider"),
+        CheckConstraint(_in("status", INTEGRATION_CONNECTION_STATUSES), name="ck_external_integration_status"),
+    )
+
+
+class ExternalIntegrationLocation(TenantMixin, db.Model):
+    """Maps one authorized ParkPilot lot to a provider's opaque location identifier."""
+    __tablename__ = "external_integration_locations"
+    id = db.Column(db.Integer, primary_key=True)
+    connection_id = db.Column(db.Integer, db.ForeignKey("external_integration_connections.id", ondelete="CASCADE"), nullable=False, index=True)
+    lot_id = db.Column(db.Integer, db.ForeignKey("lots.id", ondelete="CASCADE"), nullable=False, index=True)
+    external_location_id = db.Column(db.String(160), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("connection_id", "lot_id", name="uq_external_location_connection_lot"),
+        UniqueConstraint("connection_id", "external_location_id", name="uq_external_location_connection_external_id"),
+    )
+
+
+class ExternalBookingMapping(TenantMixin, db.Model):
+    """Idempotency key and linkage for an external reservation mapped into ParkPilot."""
+    __tablename__ = "external_booking_mappings"
+    id = db.Column(db.Integer, primary_key=True)
+    connection_id = db.Column(db.Integer, db.ForeignKey("external_integration_connections.id", ondelete="CASCADE"), nullable=False, index=True)
+    booking_id = db.Column(db.Integer, db.ForeignKey("bookings.id", ondelete="SET NULL"), index=True)
+    external_booking_id = db.Column(db.String(160), nullable=False)
+    external_location_id = db.Column(db.String(160), nullable=False, default="")
+    last_synced_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("connection_id", "external_booking_id", name="uq_external_booking_connection_external_id"),
+        UniqueConstraint("connection_id", "booking_id", name="uq_external_booking_connection_booking"),
+    )
+
+
+class ExternalIntegrationSyncRun(TenantMixin, db.Model):
+    """Auditable status for one future provider synchronization attempt."""
+    __tablename__ = "external_integration_sync_runs"
+    id = db.Column(db.Integer, primary_key=True)
+    connection_id = db.Column(db.Integer, db.ForeignKey("external_integration_connections.id", ondelete="CASCADE"), nullable=False, index=True)
+    direction = db.Column(db.String(8), nullable=False)
+    status = db.Column(db.String(10), nullable=False, default="running")
+    started_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    completed_at = db.Column(db.DateTime(timezone=True))
+    records_processed = db.Column(db.Integer, nullable=False, default=0)
+    error_summary = db.Column(db.String(500), nullable=False, default="")
+
+    __table_args__ = (
+        CheckConstraint(_in("direction", INTEGRATION_SYNC_DIRECTIONS), name="ck_external_sync_direction"),
+        CheckConstraint(_in("status", INTEGRATION_SYNC_STATUSES), name="ck_external_sync_status"),
+        CheckConstraint("records_processed >= 0", name="ck_external_sync_records_processed"),
+    )
+
+
 # --- automatic read scoping ---------------------------------------------------
 
 SCOPED = (
     User, Lot, Space, PriceRule, DiscountCode, TenantTranslation, TenantPage, Customer, Vehicle, Hold, Booking, Payment,
     ApiKey, UsageLog, IdempotencyRecord, WebhookEndpoint, WebhookDelivery,
-    Inspection, InspectionPhoto, DamageMark, Dispute, AuditLog, Invoice, Notification, Subscription, Alert,
+    Inspection, InspectionPhoto, InspectionVideo, DamageMark, Dispute, AuditLog, Invoice, Notification, Subscription, Alert,
+    ExternalIntegrationConnection, ExternalIntegrationLocation, ExternalBookingMapping, ExternalIntegrationSyncRun,
 )
 
 

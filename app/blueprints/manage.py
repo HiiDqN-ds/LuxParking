@@ -9,7 +9,7 @@ from sqlalchemy import delete, select
 from ..ui_i18n import ui
 from ..extensions import db, login_manager
 from ..models import EXTRA_KINDS, Booking, BookingExtra, Extra, Inspection, Invoice, Lot, Payment, Space, Vehicle
-from ..services.availability import AvailabilityError, InvalidInterval, quote_space
+from ..services.availability import EUR_CURRENCY, AvailabilityError, InvalidInterval, quote_space
 from ..services.booking_access import create_customer_booking_token
 from ..services.booking_admin import (
     add_extra, cancel_with_refund, extra_cost, mark_extra, parse_local, remove_extra,
@@ -72,7 +72,7 @@ def booking_new():
             start, end = parse_local(form.get("pickup_at"), tenant.timezone), parse_local(form.get("return_at"), tenant.timezone)
             email = form.get("email", "").strip()
             hold = create_hold(tenant_id=tenant.id, lot_id=lot.id, space_id=space.id, pickup_at=start, return_at=end, customer_email=email)
-            if form.get("price", "").strip():
+            if form.get("price", "").strip() and lot.currency.upper() != EUR_CURRENCY:
                 price, currency = _money(form["price"]), lot.currency
             else:
                 price, currency = quote_space(space, lot, start, end)

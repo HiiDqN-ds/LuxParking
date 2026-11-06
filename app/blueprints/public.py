@@ -1,5 +1,7 @@
 """Public tenant-scoped parking search, map, and temporary reservations."""
 from datetime import datetime, timedelta, timezone
+import re
+import unicodedata
 from urllib.parse import urljoin
 from xml.etree.ElementTree import Element, SubElement, tostring
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -151,6 +153,7 @@ def _seo_context(
             "fr": "fr_FR",
             "es": "es_ES",
             "ar": "ar",
+            "tr": "tr_TR",
         }.get(locale, locale.replace("-", "_")),
         "structured_data": structured_data,
         "robots": None,
@@ -383,6 +386,143 @@ def home():
 @bp.get("/<locale>/")
 def localized_home(locale: str):
     return _render_home(_locale(locale))
+
+
+def _search_text(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value).casefold()
+    return "".join(char for char in normalized if not unicodedata.combining(char))
+
+
+def _public_search_entries(locale: str, tenant: Tenant | None, lot: Lot | None) -> list[dict[str, str]]:
+    home_url = url_for("public.localized_home", locale=locale)
+    entries: list[dict[str, str]] = []
+
+    def add(title: str, summary: str, url: str, keywords: str = "") -> None:
+        entries.append({
+            "title": title,
+            "summary": summary,
+            "url": url,
+            "search_text": _search_text(f"{title} {summary} {keywords}"),
+        })
+
+    if lot is not None and tenant is not None:
+        add(
+            translate(locale, "home.book"),
+            translate(locale, "booking.description", lot=lot.name),
+            url_for("public.localized_reserve", locale=locale, tenant_slug=tenant.slug, lot_slug=lot.slug),
+            "booking reservation parking availability price",
+        )
+
+    add(translate(locale, "lp.about.title"), translate(locale, "lp.about.text"), home_url + "#about-title")
+    add(
+        translate(locale, "lp.features.title"),
+        " ".join(
+            f"{translate(locale, f'lp.f{index}.t')} {translate(locale, f'lp.f{index}.d')}"
+            for index in range(1, 7)
+        ),
+        home_url + "#vorteile",
+    )
+    add(
+        translate(locale, "lp.process.title"),
+        " ".join(
+            f"{translate(locale, f'lp.s{index}.t')} {translate(locale, f'lp.s{index}.d')}"
+            for index in range(1, 5)
+        ),
+        home_url + "#ablauf",
+    )
+    add(
+        translate(locale, "lp.loc.title"),
+        f"{translate(locale, 'lp.loc.address')} {translate(locale, 'lp.loc.phone')} "
+        f"{translate(locale, 'lp.loc.email')} {translate(locale, 'lp.loc.route')} "
+        f"{translate(locale, 'lp.loc.from')} {translate(locale, 'lp.loc.to')}",
+        home_url + "#anfahrt",
+        "contact address directions airport",
+    )
+    for index in range(1, 7):
+        add(
+            translate(locale, f"lp.faq.q{index}"),
+            translate(locale, f"lp.faq.a{index}"),
+            home_url + "#faq",
+        )
+    add(
+        translate(locale, "faq.hold.question"),
+        translate(locale, "faq.hold.answer"),
+        home_url + "#faq",
+    )
+    for key, endpoint, keywords in (
+        ("legal.terms", "legal.agb", "AGB terms conditions Allgemeine Geschäftsbedingungen"),
+        ("legal.privacy", "legal.datenschutz", "Datenschutz privacy data protection"),
+        ("legal.imprint", "legal.impressum", "Impressum Anbieter contact"),
+    ):
+        add(translate(locale, key), translate(locale, "search.legal_summary"), url_for(endpoint), keywords)
+
+    if tenant is not None:
+        for kind in ("faq", "blog"):
+            add(
+                translate(locale, f"content.{kind}"),
+                translate(locale, f"content.{kind}.description", tenant=tenant.name),
+                url_for("public.localized_content_index", locale=locale, tenant_slug=tenant.slug, kind=kind),
+                "questions answers articles news",
+            )
+        pages = db.session.execute(
+            select(TenantPage)
+            .where(
+                TenantPage.tenant_id == tenant.id,
+                TenantPage.locale == locale,
+                TenantPage.published.is_(True),
+            )
+            .order_by(TenantPage.published_at.desc(), TenantPage.id.desc())
+            .limit(100)
+        ).scalars()
+        for page in pages:
+            add(
+                page.title,
+                page.summary or page.body[:320],
+                url_for(
+                    "public.localized_content_page",
+                    locale=locale,
+                    tenant_slug=tenant.slug,
+                    kind=page.kind,
+                    slug=page.slug,
+                ),
+                page.body,
+            )
+    return entries
+
+
+@bp.get("/<locale>/search")
+def localized_search(locale: str):
+    locale = _locale(locale)
+    query = request.args.get("q", "").strip()[:100]
+    terms = [term for term in re.findall(r"\w+", _search_text(query)) if term]
+    result_entries: list[dict[str, str]] = []
+    if terms:
+        public = _default_public_lot()
+        tenant, lot = public if public else (None, None)
+        matches = [
+            entry for entry in _public_search_entries(locale, tenant, lot)
+            if all(term in entry["search_text"] for term in terms)
+        ]
+        result_entries = matches[:30]
+
+    title = translate(locale, "search.title")
+    seo = _seo_context(
+        locale=locale,
+        endpoint="public.localized_search",
+        title=title,
+        description=translate(locale, "search.description"),
+        x_default_endpoint="public.localized_home",
+        x_default_values={"locale": locale},
+    )
+    seo["robots"] = "noindex,follow"
+    return render_template(
+        "public/search.html",
+        locale=locale,
+        query=query,
+        results=result_entries,
+        seo=seo,
+        language_links=_language_links("public.localized_home", locale=locale),
+    )
 
 
 @bp.get("/content/<tenant_slug>/<kind>", defaults={"locale": None}, endpoint="content_index")

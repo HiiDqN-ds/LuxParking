@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import html
 from xml.etree import ElementTree
 
 from app.extensions import db
@@ -26,11 +27,21 @@ def test_home_language_negotiation_metadata_and_rtl(client):
     assert b"rel=\"canonical\"" in negotiated.data
     assert b"og:title" in negotiated.data
     assert b"application/ld+json" in negotiated.data
+    german_home = client.get("/de/")
+    assert "Reservieren Sie Ihren Parkplatz bei".encode() in german_home.data
+    assert b'href="/tr/"' in german_home.data
 
     arabic = client.get("/ar/")
     assert arabic.status_code == 200
     assert b"<html lang=\"ar\" dir=\"rtl\"" in arabic.data
     assert "العربية".encode() in arabic.data
+
+    turkish = client.get("/tr/")
+    assert turkish.status_code == 200
+    assert b"<html lang=\"tr\"" in turkish.data
+    assert b'hreflang="tr"' in turkish.data
+    assert b"konumunda park yerinizi bulun" in turkish.data
+    assert b'og:locale" content="tr_TR"' in turkish.data
 
 
 def test_translation_catalogs_have_the_same_keys(app):
@@ -51,6 +62,12 @@ def test_localized_map_renders_translated_copy_and_seo(client):
     assert b'hreflang="ar"' in response.data
     assert b"FAQPage" in response.data
     assert "Ist ein temporärer Platzhalter eine bestätigte Buchung?".encode() in response.data
+
+    turkish = client.get(f"/tr/reserve/{tenant_slug}/{lot_slug}")
+    assert turkish.status_code == 200
+    assert b'<html lang="tr"' in turkish.data
+    assert "Park yerinizi seçin" in html.unescape(turkish.get_data(as_text=True))
+    assert b'hreflang="tr"' in turkish.data
 
 
 def test_localized_availability_error_uses_selected_locale(client):

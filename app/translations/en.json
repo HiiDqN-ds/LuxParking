@@ -315,5 +315,14 @@
   "chat.assistant": "Assistant",
   "chat.q1": "How much does parking cost per day?",
   "chat.q2": "How does the airport shuttle work?",
-  "chat.q3": "How do I book?"
+  "chat.q3": "How do I book?",
+  "search.title": "Search the site",
+  "search.description": "Search public pages, FAQs, booking information and legal details.",
+  "search.label": "Search this website",
+  "search.placeholder": "Try “terms”, “parking” or “shuttle”",
+  "search.submit": "Search",
+  "search.results": "Search results",
+  "search.empty": "Search public pages, FAQs, booking information and legal details.",
+  "search.no_results": "No matching public information was found. Try another search.",
+  "search.legal_summary": "Legal information and contact details."
 }

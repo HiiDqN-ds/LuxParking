@@ -34,6 +34,7 @@ from ..models import (
     Hold,
     Inspection,
     InspectionPhoto,
+    InspectionVideo,
     Lot,
     Role,
     Space,
@@ -63,6 +64,7 @@ from ..services.inspections import (
     create_inspection,
     presigned_photo_url,
     upload_inspection_photo,
+    upload_inspection_video,
 )
 from ..services.inspections import InspectionStorageError
 
@@ -196,6 +198,17 @@ def _photo_bytes():
     if len(data) > limit:
         raise ValueError("The compressed image exceeds the upload size limit.")
     return data, image.mimetype
+
+
+def _video_bytes():
+    video = request.files.get("video")
+    if video is None:
+        raise ValueError("Choose a video before uploading.")
+    limit = current_app.config.get("INSPECTION_MAX_VIDEO_BYTES", 8 * 1024 * 1024)
+    data = video.stream.read(limit + 1)
+    if len(data) > limit:
+        raise ValueError("The inspection video exceeds the upload size limit.")
+    return data, video.mimetype
 
 
 def _booking_qr_serializer() -> URLSafeSerializer:
@@ -522,7 +535,7 @@ def inspection_page(booking_id: int, phase: str):
         inspection=inspection,
         phase=phase,
         draft=read_inspection_draft(inspection) if inspection else {},
-        required_done=len({photo.category for photo in inspection.photos} & set(REQUIRED_PHOTO_CATEGORIES)) if inspection else 0,
+        video_done=len({video.category for video in inspection.videos} & set(REQUIRED_PHOTO_CATEGORIES)) if inspection else 0,
         required_total=len(REQUIRED_PHOTO_CATEGORIES),
         has_signature=bool(inspection and any(photo.category == "signature" for photo in inspection.photos)),
         mark_count=len(inspection.damage_marks) if inspection else 0,
@@ -572,6 +585,31 @@ def upload_photo(inspection_id: int):
     if request.accept_mimetypes.best == "application/json":
         return jsonify(photo_id=photo.id, category=photo.category), 201
     flash(ui('%(p0)s saved.', p0=ui(PHOTO_LABELS.get(photo.category, photo.category))), "ok")
+    return redirect(url_for("staff.inspection_page", booking_id=inspection.booking_id, phase=inspection.phase))
+
+
+@bp.post("/inspections/<int:inspection_id>/videos")
+def upload_video(inspection_id: int):
+    inspection = _inspection_or_404(inspection_id)
+    try:
+        file_data, content_type = _video_bytes()
+        video = upload_inspection_video(
+            tenant_id=current_user.tenant_id,
+            inspection_id=inspection.id,
+            staff_user_id=current_user.id,
+            category=request.form.get("category", ""),
+            file_data=file_data,
+            content_type=content_type,
+            captured_at=_capture_time(),
+        )
+    except (InspectionError, ValueError) as exc:
+        if request.accept_mimetypes.best == "application/json":
+            return jsonify(error=str(exc)), 400
+        flash(ui(str(exc)), "error")
+        return redirect(url_for("staff.inspection_page", booking_id=inspection.booking_id, phase=inspection.phase))
+    if request.accept_mimetypes.best == "application/json":
+        return jsonify(video_id=video.id, category=video.category), 201
+    flash(ui('%(p0)s saved.', p0=ui(PHOTO_LABELS.get(video.category, video.category))), "ok")
     return redirect(url_for("staff.inspection_page", booking_id=inspection.booking_id, phase=inspection.phase))
 
 
@@ -637,6 +675,7 @@ def finish_inspection(inspection_id: int):
             belongings=request.form.get("belongings", ""),
             notes=request.form.get("notes", ""),
             no_damage_confirmed=request.form.get("no_damage_confirmed") == "yes",
+            require_videos=True,
             vehicle_plate=request.form.get("vehicle_plate", ""),
             vehicle_make=request.form.get("vehicle_make", ""),
             vehicle_model=request.form.get("vehicle_model", ""),
@@ -685,6 +724,24 @@ def photo(photo_id: int):
         select(InspectionPhoto).where(
             InspectionPhoto.id == photo_id,
             InspectionPhoto.tenant_id == current_user.tenant_id,
+        )
+    ).scalar_one_or_none()
+    if stored is None:
+        abort(404)
+    _booking_or_404(stored.inspection.booking_id)
+    try:
+        target = presigned_photo_url(object_key=stored.object_key)
+    except InspectionError as exc:
+        abort(503, description=str(exc))
+    return redirect(target)
+
+
+@bp.get("/videos/<int:video_id>")
+def video(video_id: int):
+    stored = db.session.execute(
+        select(InspectionVideo).where(
+            InspectionVideo.id == video_id,
+            InspectionVideo.tenant_id == current_user.tenant_id,
         )
     ).scalar_one_or_none()
     if stored is None:

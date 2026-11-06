@@ -48,7 +48,7 @@ def test_checkout_adds_the_shuttle_per_person_and_refuses_a_third_person(client,
     ok = client.post(base + "/book", data={**form, "passengers": "2"})
     assert "/booking/" in ok.headers["Location"]
     booking = Booking.query.one()
-    assert booking.total_amount == Decimal("19.80") + Decimal("20.00")  # 2 days x 9.90 + 2 persons x 10.00
+    assert booking.total_amount == Decimal("50.00") + Decimal("20.00")  # EUR 50 parking + 2 persons x 10.00
 
 
 def test_customers_do_not_see_reserved_spaces(client, app):

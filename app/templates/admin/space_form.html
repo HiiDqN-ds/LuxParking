@@ -9,7 +9,7 @@
   <div class="row2">{{ field(form.name) }}{{ field(form.kind) }}</div>
   {{ field(form.status, hint=_("Available spaces show green on the booking map, optional blue, blocked grey.")) }}
   <div class="checks">{{ check(form.covered) }}{{ check(form.ev_charging) }}{{ check(form.default_available) }}</div>
-  <div class="row2">{{ field(form.base_price, hint=_("Space-specific base price override. Base lot rate remains the default fallback.")) }}{{ field(form.bus_distance_m) }}</div>
+  <div class="row2">{{ field(form.base_price, hint=_("Space-specific base price override; EUR lots always use the global EUR tariff.")) }}{{ field(form.bus_distance_m) }}</div>
   <div class="row2">{{ field(form.min_hours) }}{{ field(form.max_days) }}</div>
   {{ field(form.photo_url, hint=_("Shown on the space card in the booking map.")) }}
   <fieldset><legend>{{ _('Position on the lot map (%(p0)s × %(p1)s)', p0=(lot.canvas_w), p1=(lot.canvas_h)) }}</legend>

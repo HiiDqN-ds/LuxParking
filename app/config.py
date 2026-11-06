@@ -48,11 +48,13 @@ class Config:
     LOGIN_MAX_FAILURES = int(os.environ.get("LOGIN_MAX_FAILURES", "5"))
     LOGIN_IP_MAX_FAILURES = int(os.environ.get("LOGIN_IP_MAX_FAILURES", "20"))
     LOGIN_LOCK_MINUTES = int(os.environ.get("LOGIN_LOCK_MINUTES", "15"))
-    SUPPORTED_LOCALES = tuple(
-        locale.strip().lower()
-        for locale in os.environ.get("SUPPORTED_LOCALES", "de,en,nl,fr,es,ar").split(",")
-        if locale.strip()
-    )
+    SUPPORTED_LOCALES = tuple(dict.fromkeys(
+        [
+            locale.strip().lower()
+            for locale in os.environ.get("SUPPORTED_LOCALES", "de,en,nl,fr,es,ar").split(",")
+            if locale.strip()
+        ] + ["tr"]
+    ))
     RTL_LOCALES = ("ar", "he", "fa", "ur")
     SITE_URL = os.environ.get("SITE_URL", "").rstrip("/")
     # Address printed into QR codes. Empty = SITE_URL. Local runs set it to this computer's network address so phones can open it.
@@ -69,6 +71,7 @@ class Config:
     INSPECTION_S3_ACCESS_KEY_ID = os.environ.get("INSPECTION_S3_ACCESS_KEY_ID")
     INSPECTION_S3_SECRET_ACCESS_KEY = os.environ.get("INSPECTION_S3_SECRET_ACCESS_KEY")
     INSPECTION_MAX_PHOTO_BYTES = int(os.environ.get("INSPECTION_MAX_PHOTO_BYTES", 8 * 1024 * 1024))
+    INSPECTION_MAX_VIDEO_BYTES = int(os.environ.get("INSPECTION_MAX_VIDEO_BYTES", 8 * 1024 * 1024))
     INSPECTION_MAX_IMAGE_PIXELS = int(os.environ.get("INSPECTION_MAX_IMAGE_PIXELS", 12_000_000))
     SMTP_HOST = os.environ.get("SMTP_HOST")
     SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))

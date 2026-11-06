@@ -143,7 +143,7 @@ def test_public_key_cannot_access_other_tenant_map(client, other_tenant):
     assert response.status_code == 404
 
 
-def test_quote_and_hold_use_tenant_pricing_and_idempotency(client):
+def test_quote_and_hold_use_global_eur_fare_and_idempotency(client):
     tenant_id, lot_id, space_id = api_tenant()
     token = api_credential(tenant_id, ["quotes:write", "holds:write"])
     start, end = date_range()
@@ -154,7 +154,7 @@ def test_quote_and_hold_use_tenant_pricing_and_idempotency(client):
         headers=api_headers(token),
     )
     assert quote.status_code == 200
-    assert quote.json["quote"]["total"] == "18.00"
+    assert quote.json["quote"]["total"] == "50.00"
 
     headers = api_headers(token, **{"Idempotency-Key": "hold-request-001"})
     request_body = {
@@ -227,7 +227,7 @@ def test_booking_uses_server_quote_and_fake_payment_is_nonproduction_only(client
     )
     assert created.status_code == 201, created.json
     booking_data = created.json["booking"]
-    assert booking_data["total_amount"] == "18.00"
+    assert booking_data["total_amount"] == "50.00"
     assert booking_data["currency"] == "EUR"
     assert booking_data["payment_status"] == "paid"
 
@@ -247,7 +247,7 @@ def test_booking_uses_server_quote_and_fake_payment_is_nonproduction_only(client
         booking = db.session.execute(
             select(Booking).where(Booking.id == booking_data["id"])
         ).scalar_one()
-        assert booking.total_amount == 18
+        assert booking.total_amount == 50
         assert booking.payment_status == "paid"
         event_types = set(
             db.session.execute(

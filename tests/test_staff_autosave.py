@@ -15,6 +15,7 @@ from app.services.inspections import (
     read_inspection_draft,
     save_inspection_draft,
     upload_inspection_photo,
+    upload_inspection_video,
 )
 from app.tenancy import use_tenant
 from tests.conftest import login
@@ -46,6 +47,13 @@ def _add_all_photos(parking, inspection, owner):
     for category in (*REQUIRED_PHOTO_CATEGORIES, "signature"):
         upload_inspection_photo(tenant_id=parking[0], inspection_id=inspection.id, staff_user_id=owner, category=category,
                                 file_data=image.getvalue(), content_type="image/webp", captured_at=datetime.now(timezone.utc))
+
+
+def _add_all_videos(parking, inspection, owner):
+    video = b"\x00\x00\x00\x18ftypisom" + b"\x00" * 24
+    for category in REQUIRED_PHOTO_CATEGORIES:
+        upload_inspection_video(tenant_id=parking[0], inspection_id=inspection.id, staff_user_id=owner, category=category,
+                                file_data=video, content_type="video/mp4", captured_at=datetime.now(timezone.utc))
 
 
 def test_draft_is_saved_cleaned_and_prefills_the_page(client, parking, open_inspection):
@@ -95,6 +103,7 @@ def test_draft_needs_a_login_and_stays_inside_its_tenant(app, client, parking, o
 def test_one_tap_completes_the_inspection_and_checks_the_customer_in(client, parking, open_inspection):
     booking, inspection, owner = open_inspection
     _add_all_photos(parking, inspection, owner)
+    _add_all_videos(parking, inspection, owner)
     login(client)
     response = client.post(f"/staff/inspections/{inspection.id}/complete", data={
         "then": "next", "fuel_level": "60", "odometer_km": "48200", "key_count": "1", "no_damage_confirmed": "yes",
@@ -107,6 +116,7 @@ def test_one_tap_completes_the_inspection_and_checks_the_customer_in(client, par
 def test_without_the_one_tap_flag_the_booking_is_not_moved(client, parking, open_inspection):
     booking, inspection, owner = open_inspection
     _add_all_photos(parking, inspection, owner)
+    _add_all_videos(parking, inspection, owner)
     login(client)
     client.post(f"/staff/inspections/{inspection.id}/complete", data={
         "fuel_level": "60", "odometer_km": "48200", "key_count": "1", "no_damage_confirmed": "yes", "vehicle_plate": "D-AK 2026"})

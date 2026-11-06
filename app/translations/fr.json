@@ -315,5 +315,14 @@
   "chat.assistant": "Assistant",
   "chat.q1": "Combien coûte le stationnement par jour ?",
   "chat.q2": "Comment fonctionne la navette aéroport ?",
-  "chat.q3": "Comment réserver ?"
+  "chat.q3": "Comment réserver ?",
+  "search.title": "Rechercher sur le site",
+  "search.description": "Recherchez dans les pages publiques, les FAQ, les informations de réservation et les mentions légales.",
+  "search.label": "Rechercher sur ce site",
+  "search.placeholder": "Par exemple « conditions », « parking » ou « navette »",
+  "search.submit": "Rechercher",
+  "search.results": "Résultats de recherche",
+  "search.empty": "Recherchez dans les pages publiques, les FAQ, les informations de réservation et les mentions légales.",
+  "search.no_results": "Aucune information publique correspondante. Essayez une autre recherche.",
+  "search.legal_summary": "Informations légales et coordonnées."
 }

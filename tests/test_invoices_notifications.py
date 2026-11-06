@@ -10,7 +10,7 @@ from app.services.booking_events import notify_booking_event, send_due_reminders
 from app.services.bookings import (
     cancel_booking, create_payment_record, update_payment_status,
 )
-from app.services.invoices import ensure_invoice, latest_invoice, split_vat, sync_invoices
+from app.services.invoices import ensure_invoice, format_money, latest_invoice, split_vat, sync_invoices
 from app.services.messaging import normalize_phone
 from tests.booking_helpers import capture_email, make_booking, pdf_attachments, seed_tenant
 from tests.conftest import login
@@ -28,6 +28,10 @@ def _pay(booking):
 def test_vat_is_split_out_of_the_gross_price():
     assert split_vat(Decimal("119.00"), Decimal("19")) == (Decimal("100.00"), Decimal("19.00"))
     assert split_vat(Decimal("10.00"), Decimal("0")) == (Decimal("10.00"), Decimal("0.00"))
+
+
+def test_turkish_invoice_money_uses_local_number_format():
+    assert format_money(Decimal("1234.50"), "EUR", "tr") == "1.234,50 €"
 
 
 def test_invoice_numbers_are_gapless_and_amounts_add_up(app):

@@ -19,8 +19,8 @@
 {% else %}
 <div class="capture-progress" id="capture-progress"
      data-photo-categories='{{ required_photos|tojson }}'
-     data-completed-categories='{{ inspection.photos|map(attribute="category")|list|tojson }}'>
-  <span id="capture-count">{{ _('Evidence photos: %(p0)s', p0=(inspection.photos|length)) }}</span>
+     data-completed-categories='{{ inspection.videos|map(attribute="category")|list|tojson }}'>
+  <span id="capture-count">{{ _('Vehicle videos: %(p0)s', p0=(inspection.videos|length)) }}</span>
   <span id="upload-queue-count" aria-live="polite">{{ _('Offline queue: 0') }}</span>
 </div>
 {% if phase == "departure" and arrival_photos %}
@@ -51,33 +51,42 @@
   <p class="eyebrow" id="guided-step"></p>
   <h2 id="guided-title"></h2>
   <p class="muted" id="guided-hint"></p>
-  <progress id="guided-progress" value="0" max="12" aria-label="{{ _('Photo progress') }}"></progress>
-  <label class="btn btn-primary btn-lg guided-btn">{{ _('Take photo') }}<input type="file" accept="image/*" capture="environment" hidden></label>
+  <progress id="guided-progress" value="0" max="12" aria-label="{{ _('Video progress') }}"></progress>
+  <label class="btn btn-primary btn-lg guided-btn">{{ _('Record video') }}<input type="file" accept="video/mp4,video/webm,video/quicktime" capture="environment" hidden></label>
   <p class="muted" id="guided-status" role="status" aria-live="polite"></p>
 </section>
 <section class="panel" aria-labelledby="photo-heading">
-  <h2 id="photo-heading">{{ _('Required vehicle photos') }}</h2>
-  <p class="muted">{{ _('Take clear, well-lit photos. Each photo is compressed on this device and saved the moment you take it.') }}</p>
+  <h2 id="photo-heading">{{ _('Vehicle videos') }}</h2>
+  <p class="muted">{{ _('Record a short video for each vehicle view. A still frame is saved automatically for before-and-after comparison.') }}</p>
   <div class="evidence-grid">
     {% for category in required_photos %}
     {% set existing = inspection.photos|selectattr("category", "equalto", category)|first %}
-    <form class="evidence-form" method="post" enctype="multipart/form-data"
-          action="{{ url_for('staff.upload_photo', inspection_id=inspection.id) }}" data-evidence-form>
+    {% set existing_video = inspection.videos|selectattr("category", "equalto", category)|first %}
+    <article class="evidence-form video-evidence-card">
+      <strong class="evidence-label">{{ photo_labels.get(category, category.replace("_", " ")|title)|tr }}</strong>
+      {% if existing_video %}
+        <span class="evidence-done">{{ _('Video saved · %(p0)s', p0=(existing_video.staff_name)) }}</span>
+        <video class="inspection-video" controls playsinline preload="metadata" src="{{ url_for('staff.video', video_id=existing_video.id) }}"></video>
+        {% if existing %}<a class="evidence-preview" href="{{ url_for('staff.photo', photo_id=existing.id) }}">{{ _('View comparison frame') }}</a>{% endif %}
+      {% else %}
+      <form class="video-upload-form" method="post" enctype="multipart/form-data"
+            action="{{ url_for('staff.upload_video', inspection_id=inspection.id) }}" data-video-form>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="category" value="{{ category }}">
+        <input type="hidden" name="captured_at" value="">
+        <label class="btn video-capture-control">{{ _('Record video') }}
+          <input type="file" name="video" accept="video/mp4,video/webm,video/quicktime" capture="environment" required>
+        </label>
+        <span class="upload-state" aria-live="polite"></span>
+      </form>
+      {% endif %}
+      <form class="frame-upload-form" method="post" enctype="multipart/form-data"
+          action="{{ url_for('staff.upload_photo', inspection_id=inspection.id) }}" data-frame-form>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="category" value="{{ category }}">
       <input type="hidden" name="captured_at" value="">
-      <label class="evidence-label">
-        <span>{{ photo_labels.get(category, category.replace("_", " ")|title)|tr }}</span>
-        {% if existing %}
-          <span class="evidence-done">{{ _('Captured · %(p0)s', p0=(existing.staff_name)) }}</span>
-          <a class="evidence-preview" href="{{ url_for('staff.photo', photo_id=existing.id) }}">{{ _('View photo') }}</a>
-        {% else %}
-          <input type="file" name="photo" accept="image/*" capture="environment" required>
-          <button class="btn" type="submit">{{ _('Capture and upload') }}</button>
-          <span class="upload-state" aria-live="polite"></span>
-        {% endif %}
-      </label>
-    </form>
+      </form>
+    </article>
     {% endfor %}
     {% set signature = inspection.photos|selectattr("category", "equalto", "signature")|first %}
     {% if signature %}
@@ -206,8 +215,8 @@
     <label class="field">{{ _('Belongings inside the vehicle') }}<textarea name="belongings" maxlength="2000">{{ draft.get('belongings', '') }}</textarea></label>
     <label class="field">{{ _('Notes') }}<textarea name="notes" maxlength="2000">{{ draft.get('notes', '') }}</textarea></label>
     <label class="check no-damage-check"><input type="checkbox" name="no_damage_confirmed" value="yes" {% if draft.get('no_damage_confirmed') == 'yes' %}checked{% endif %}> {{ _('I confirm there is no damage to record') }}</label>
-    <ul class="complete-checklist" id="complete-checklist" data-missing="{{ _('Still missing: %(p0)s', p0='{items}') }}" data-marks="{{ mark_count }}">
-      <li data-key="photos" class="{{ 'is-done' if required_done >= required_total }}">{{ _('Vehicle photos: %(p0)s of %(p1)s', p0=required_done, p1=required_total) }}</li>
+    <ul class="complete-checklist" id="complete-checklist" data-missing="{{ _('Still missing: %(p0)s', p0='{items}') }}" data-marks="{{ mark_count }}" data-video-count="{{ video_done }}" data-video-required="{{ required_total }}">
+      <li data-key="videos" class="{{ 'is-done' if video_done >= required_total }}">{{ _('Vehicle videos: %(p0)s of %(p1)s', p0=video_done, p1=required_total) }}</li>
       <li data-key="signature" class="{{ 'is-done' if has_signature }}">{{ _('Customer signature') }}</li>
       <li data-key="odometer" class="{{ 'is-done' if draft.get('odometer_km') }}">{{ _('Odometer (km)') }}</li>
       <li data-key="damage" class="{{ 'is-done' if (mark_count and draft.get('no_damage_confirmed') != 'yes') or (not mark_count and draft.get('no_damage_confirmed') == 'yes') }}">{{ _('Damage declaration') }}</li>

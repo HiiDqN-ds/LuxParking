@@ -43,7 +43,7 @@
   <p class="chips"><a class="chip {{ 'on' if not kind }}" href="{{ url_for('alerts.center') }}">{{ _('All') }}</a>
     {% for code, icon, name in kinds %}<a class="chip {{ 'on' if kind == code }}" href="{{ url_for('alerts.center', kind=code) }}">{{ icon }} {{ _(name) }}</a>{% endfor %}</p>
   {% if items %}<ul class="timeline">{% for item in items %}
-    <li class="alert-item {{ item.colour }}"><a href="{{ item.url or '#' }}"><span class="alert-ico" aria-hidden="true">{{ item.icon }}</span><span class="alert-body">{{ item.text }}<small>{{ item.ago }}</small></span></a></li>{% endfor %}</ul>
+    <li class="alert-item {{ item.colour }}"><a href="{{ item.url or '#' }}"><span class="alert-ico" aria-hidden="true">{{ item.icon }}</span><span class="alert-body">{{ item.text }}<time datetime="{{ item.created_at }}" title="{{ item.created_at }}">{{ item.ago }}</time></span></a></li>{% endfor %}</ul>
   {% else %}<div class="empty">{{ _('No notifications yet.') }}</div>{% endif %}
 </section>
 {% endblock %}

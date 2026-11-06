@@ -14,6 +14,7 @@ from app.models import (
     Hold,
     Inspection,
     InspectionPhoto,
+    InspectionVideo,
     Lot,
     Space,
     Tenant,
@@ -35,6 +36,7 @@ from app.services.inspections import (
     create_inspection,
     purge_expired_inspections,
     upload_inspection_photo,
+    upload_inspection_video,
 )
 from app.services.inspection_reports import send_inspection_report
 from app.tenancy import use_tenant
@@ -92,6 +94,20 @@ def upload_required_photos(tenant_id, inspection_id):
         )
 
 
+def upload_required_videos(tenant_id, inspection_id):
+    video = b"\x00\x00\x00\x18ftypisom" + b"\x00" * 24
+    for category in REQUIRED_PHOTO_CATEGORIES:
+        upload_inspection_video(
+            tenant_id=tenant_id,
+            inspection_id=inspection_id,
+            staff_user_id=1,
+            category=category,
+            file_data=video,
+            content_type="video/mp4",
+            captured_at=datetime.now(timezone.utc),
+        )
+
+
 def test_upload_stores_verified_hash_and_employee_metadata(app, parking, monkeypatch):
     from app.services import inspections
 
@@ -133,6 +149,49 @@ def test_upload_stores_verified_hash_and_employee_metadata(app, parking, monkeyp
             captured_at=datetime.now(timezone.utc),
         )
 
+
+def test_video_upload_stores_private_video_with_tenant_and_category_metadata(app, parking, monkeypatch):
+    from app.services import inspections
+
+    captured = []
+    monkeypatch.setattr(inspections, "_store_object", lambda **kwargs: captured.append(kwargs))
+    booking = create_reserved_booking(parking)
+    inspection = create_inspection(
+        tenant_id=parking[0],
+        booking_id=booking.id,
+        phase="arrival",
+        staff_user_id=1,
+    )
+    video_data = b"\x00\x00\x00\x18ftypisom" + b"\x00" * 24
+    video = upload_inspection_video(
+        tenant_id=parking[0],
+        inspection_id=inspection.id,
+        staff_user_id=1,
+        category="front",
+        file_data=video_data,
+        content_type="video/mp4",
+        captured_at=datetime.now(timezone.utc),
+    )
+
+    assert video.sha256 == hashlib.sha256(video_data).hexdigest()
+    assert video.size_bytes == len(video_data)
+    assert video.content_type == "video/mp4"
+    assert video.staff_name == "Owner"
+    assert video.booking_ref == booking.booking_ref
+    assert video.object_key.endswith(".mp4")
+    assert captured[0]["file_data"] == video_data
+    assert InspectionVideo.query.filter_by(inspection_id=inspection.id, category="front").one().id == video.id
+
+    with pytest.raises(InspectionValidationError, match="valid inspection video"):
+        upload_inspection_video(
+            tenant_id=parking[0],
+            inspection_id=inspection.id,
+            staff_user_id=1,
+            category="back",
+            file_data=b"not a video",
+            content_type="video/mp4",
+            captured_at=datetime.now(timezone.utc),
+        )
 
 def test_damage_marker_rejects_non_finite_coordinates(app, parking):
     booking = create_reserved_booking(parking)
@@ -538,6 +597,7 @@ def test_arrival_inspection_creates_vehicle_profile_and_links_existing_photos(
     assert b"Vehicle profile" in started.data
     inspection = Inspection.query.filter_by(booking_id=booking.id, phase="arrival").one()
     upload_required_photos(parking[0], inspection.id)
+    upload_required_videos(parking[0], inspection.id)
 
     completed = client.post(
         f"/staff/inspections/{inspection.id}/complete",

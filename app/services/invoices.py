@@ -58,7 +58,7 @@ def format_money(amount, currency: str, locale: str = "de") -> str:
     value = money(amount)
     sign = "-" if value < 0 else ""
     text = f"{abs(value):,.2f}"  # 1,234.56
-    if locale in ("de", "nl", "es"):
+    if locale in ("de", "nl", "es", "tr"):
         text = text.replace(",", "X").replace(".", ",").replace("X", ".")
     elif locale == "fr":
         text = text.replace(",", "\u202f").replace(".", ",")

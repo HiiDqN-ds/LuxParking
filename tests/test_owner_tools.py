@@ -49,7 +49,7 @@ def test_checkout_with_extras_pdf_qr_and_email_attachment(client, app, monkeypat
     assert b"LH123" in html and b"qr-dialog" in html and b"ticket.pdf" in html
     with app.app_context():
         booking = Booking.query.one()
-        assert booking.total_amount == Decimal("32.50")  # 2 days x 10 + 12.50 shuttle
+        assert booking.total_amount == Decimal("62.50")  # EUR 50 parking + 12.50 shuttle
     pdf = client.get(f"/booking/{token}/ticket.pdf")
     assert pdf.status_code == 200 and pdf.data[:4] == b"%PDF" and "attachment" in pdf.headers["Content-Disposition"]
     png = client.get(f"/booking/{token}/qr.png")
@@ -130,14 +130,14 @@ def test_owner_extras_crud_and_manual_booking_crud(client, app):
     assert b"Full cleaning" in client.get("/admin/extras").data
     start, end = _when(100), _when(148)
     form = {"space_id": space_ids[0], "pickup_at": start.strftime("%Y-%m-%dT%H:%M"), "return_at": end.strftime("%Y-%m-%dT%H:%M"),
-            "first_name": "Max", "last_name": "Muster", "email": "max@example.com", "phone": "1", "vehicle_plate": "D-MM 1",
+            "first_name": "Max", "last_name": "Muster", "email": "max@example.com", "phone": "1", "vehicle_plate": "D-MM 1", "price": "1.00",
             f"extra_{cid}": "on", "payment_status": "pending"}
     r = client.post("/admin/bookings/new", data=form)
     assert r.status_code == 302, r.data[:400]
     with app.app_context():
         booking = Booking.query.one()
         bid, total = booking.id, booking.total_amount
-        assert total == Decimal("50.00") and len(booking.extras) == 1  # 2 days x 10 + 30 cleaning
+        assert total == Decimal("80.00") and len(booking.extras) == 1  # EUR 50 parking + 30 cleaning
     detail = client.get(f"/admin/bookings/{bid}")
     assert detail.status_code == 200 and b"Full cleaning" in detail.data
     client.post(f"/admin/bookings/{bid}/details", data={"first_name": "Maximilian", "last_name": "Muster", "email": "max@example.com", "vehicle_plate": "D-MM 2", "notes": "VIP"})
@@ -216,7 +216,7 @@ def test_customer_chooses_one_shuttle_and_one_cleaning_option(client, app):
         booking = Booking.query.one()
         names = sorted(e.name for e in booking.extras)
         assert names == ["Komplettpflege · Full valet", "Shuttle Priority"]  # the visible choice wins; one per kind
-        assert booking.total_amount == Decimal("20.00") + sum(e.unit_price for e in booking.extras)
+        assert booking.total_amount == Decimal("50.00") + sum(e.unit_price for e in booking.extras)
 
 
 def test_missing_email_server_is_calm_for_the_customer(client, app):

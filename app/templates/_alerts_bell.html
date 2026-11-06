@@ -7,7 +7,7 @@
     <div class="alerts-head"><strong>{{ _('Notifications') }}</strong>
       <button type="button" class="alerts-sound" aria-pressed="true" data-on="{{ _('Sound on') }}" data-off="{{ _('Sound off') }}">🔊 {{ _('Sound on') }}</button></div>
     <ul class="alerts-list">{% for item in widget['items'] %}
-      <li class="alert-item {{ item.colour }}"><a href="{{ item.url or url_for('alerts.center') }}"><span class="alert-ico" aria-hidden="true">{{ item.icon }}</span><span class="alert-body">{{ item.text }}<small>{{ item.ago }}</small></span></a></li>{% else %}
+      <li class="alert-item {{ item.colour }}"><a href="{{ item.url or url_for('alerts.center') }}"><span class="alert-ico" aria-hidden="true">{{ item.icon }}</span><span class="alert-body">{{ item.text }}<time datetime="{{ item.created_at }}" title="{{ item.created_at }}">{{ item.ago }}</time></span></a></li>{% else %}
       <li class="alerts-empty">{{ _('No notifications yet.') }}</li>{% endfor %}</ul>
     <div class="alerts-foot"><a href="{{ url_for('alerts.center') }}">{{ _('Open notification centre') }}</a></div>
   </div>

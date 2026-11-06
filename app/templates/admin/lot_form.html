@@ -12,7 +12,7 @@
   {{ field(form.space_count, hint=(_("Add or remove spaces. New spaces fill free spots on the map; only spaces without bookings can be removed.") if lot else _("Spaces are created in a grid on the lot map. You can move, resize or rename them later in the layout editor."))) }}
   {% if not lot %}<div class="row2">{{ field(form.covered_count, hint=_("How many of the spaces are covered (roofed). Set the exact ones later on the Spaces page.")) }}{{ field(form.ev_count, hint=_("How many spaces have an EV charger.")) }}</div>{% endif %}
   {{ field(form.background_url, hint=_("Aerial photo shown behind the spaces. Image upload arrives with file storage.")) }}
-  <div class="row2">{{ field(form.base_daily_rate, hint=_("Default daily price for this lot; can be overridden by space-specific rules.")) }}{{ field(form.currency, hint=_("Three-letter ISO code; EUR by default.")) }}</div>
+  <div class="row2">{{ field(form.base_daily_rate, hint=_("Default daily price for this lot; EUR lots always use the global EUR tariff.")) }}{{ field(form.currency, hint=_("Three-letter ISO code; EUR by default.")) }}</div>
   {{ check(form.active) }}
   <p class="actions"><button class="btn btn-primary">{{ _('Save lot') }}</button><a class="btn btn-quiet" href="{{ url_for('admin.lots') }}">{{ _('Cancel') }}</a></p>
 </form>

@@ -35,6 +35,7 @@ def test_highest_priority_price_rule_wins_and_space_scope_breaks_ties(app):
     tenant = Tenant.query.filter_by(slug="duesseldorf-airport-parking").one()
     with use_tenant(tenant.id):
         lot = Lot.query.first()
+        lot.currency = "USD"
         space = Space.query.filter_by(lot_id=lot.id).first()
         start = _future_start()
         end = start + timedelta(days=2)
@@ -349,9 +350,9 @@ def test_api_quote_applies_one_server_validated_discount(client, app):
     )
 
     assert response.status_code == 200
-    assert response.json["quote"]["subtotal"] == "25.00"
+    assert response.json["quote"]["subtotal"] == "50.00"
     assert response.json["quote"]["discount"] == "5.00"
-    assert response.json["quote"]["total"] == "20.00"
+    assert response.json["quote"]["total"] == "45.00"
 
     invalid = client.post(
         "/v1/quotes",

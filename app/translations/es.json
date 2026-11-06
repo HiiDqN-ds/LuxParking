@@ -315,5 +315,14 @@
   "chat.assistant": "Asistente",
   "chat.q1": "¿Cuánto cuesta aparcar por día?",
   "chat.q2": "¿Cómo funciona el traslado al aeropuerto?",
-  "chat.q3": "¿Cómo reservo?"
+  "chat.q3": "¿Cómo reservo?",
+  "search.title": "Buscar en el sitio",
+  "search.description": "Busca en páginas públicas, preguntas frecuentes, información de reservas y avisos legales.",
+  "search.label": "Buscar en este sitio web",
+  "search.placeholder": "Por ejemplo, «condiciones», «aparcamiento» o «traslado»",
+  "search.submit": "Buscar",
+  "search.results": "Resultados de búsqueda",
+  "search.empty": "Busca en páginas públicas, preguntas frecuentes, información de reservas y avisos legales.",
+  "search.no_results": "No se encontró información pública coincidente. Prueba otra búsqueda.",
+  "search.legal_summary": "Información legal y datos de contacto."
 }

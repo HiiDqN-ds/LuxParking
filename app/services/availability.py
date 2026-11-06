@@ -8,6 +8,11 @@ from sqlalchemy import select
 from ..extensions import db
 from ..models import Booking, Hold, Lot, PriceRule, Space, Tenant, money
 
+EUR_CURRENCY = "EUR"
+EUR_SHORT_STAY_LIMIT = timedelta(days=7)
+EUR_SHORT_STAY_TOTAL = Decimal("50.00")
+EUR_LONG_STAY_WEEKLY_RATE = Decimal("70.00")
+
 
 class AvailabilityError(Exception):
     """Base error for availability requests."""
@@ -18,7 +23,7 @@ class InvalidInterval(AvailabilityError):
 
 
 class PricingUnavailable(AvailabilityError):
-    """Raised when neither the space nor its lot has a configured rate."""
+    """Raised when neither the space nor its lot has a configured non-EUR rate."""
 
 
 def parse_aware_datetime(value: str, field: str) -> datetime:
@@ -82,7 +87,7 @@ def quote_space(
     rules: list[PriceRule] | None = None,
     tenant_timezone: str | None = None,
 ) -> tuple[Decimal, str]:
-    """Apply the highest-priority matching rule, otherwise the configured base daily rate."""
+    """Quote the global EUR tariff or, for other currencies, configured pricing rules and rates."""
     start, end = validate_interval(start, end)
     duration = end - start
     duration_hours = duration.total_seconds() / 3600
@@ -91,6 +96,12 @@ def quote_space(
         raise InvalidInterval(f"This space requires a minimum stay of {space.min_hours} hours.")
     if days > space.max_days:
         raise InvalidInterval(f"This space allows stays of up to {space.max_days} days.")
+
+    if lot.currency.upper() == EUR_CURRENCY:
+        if duration < EUR_SHORT_STAY_LIMIT:
+            return EUR_SHORT_STAY_TOTAL, lot.currency
+        weeks = (days + 6) // 7
+        return money(EUR_LONG_STAY_WEEKLY_RATE * weeks), lot.currency
 
     if rules is None:
         rules = db.session.execute(

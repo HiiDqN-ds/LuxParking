@@ -16,9 +16,7 @@
   }
   var unlocked = false;  // true once a real user gesture has started the AudioContext
   function audio() {
-    if (!unlocked) return null;  // never create/resume before a gesture: Chrome logs "AudioContext was not allowed to start"
-    if (ctx.state === 'suspended') { try { ctx.resume().catch(function () {}); } catch (e) { /* ignore */ } }
-    return ctx;
+    return unlocked && ctx && ctx.state === 'running' ? ctx : null;
   }
   function chime() {  // two soft notes, generated in the browser (no sound file to load)
     var c = audio();
@@ -32,32 +30,34 @@
       osc.connect(gain); gain.connect(c.destination); osc.start(t0); osc.stop(t0 + 0.6);
     });
   }
-  // Browsers only allow sound after a real gesture (click, key press, touch END; touchstart does not count).
-  var GESTURES = ['pointerup', 'click', 'keydown', 'touchend'];
-  function unlock() {
-    if (unlocked || !soundOn()) return;
+  // Create or resume audio only in a trusted click handler, never during background polling.
+  function unlock(event) {
+    if (!event.isTrusted || !soundOn()) return;
+    if (ctx && ctx.state === 'running') { unlocked = true; return; }
     var Ctor = window.AudioContext || window.webkitAudioContext;
     if (!Ctor) return;
     try {
       ctx = ctx || new Ctor();
       var p = ctx.resume();
       var done = function () {
-        if (ctx.state === 'running') {
-          unlocked = true;
-          GESTURES.forEach(function (n) { document.removeEventListener(n, unlock, true); });
-        }
+        if (ctx.state === 'running') unlocked = true;
       };
       if (p && p.then) p.then(done, function () {}); else done();
     } catch (e) { /* no audio available: stay silent */ }
   }
-  GESTURES.forEach(function (n) { document.addEventListener(n, unlock, { capture: true, passive: true }); });
+  document.addEventListener('click', unlock);
   function setBadge(n) { badge.textContent = n > 99 ? '99+' : String(n); badge.hidden = !n; }
   function itemHtml(a) {
     var li = document.createElement('li'); li.className = 'alert-item ' + a.colour;
     var link = document.createElement('a'); link.href = a.url || '#';
     var ico = document.createElement('span'); ico.className = 'alert-ico'; ico.setAttribute('aria-hidden', 'true'); ico.textContent = a.icon;
     var body = document.createElement('span'); body.className = 'alert-body'; body.textContent = a.text;
-    var small = document.createElement('small'); small.textContent = a.ago; body.appendChild(small);
+    var small = document.createElement('time'); small.textContent = a.ago;
+    if (a.created_at) {
+      small.dateTime = a.created_at;
+      small.title = new Date(a.created_at).toLocaleString();
+    }
+    body.appendChild(small);
     link.appendChild(ico); link.appendChild(body); li.appendChild(link); return li;
   }
   function toast(a) {
@@ -93,7 +93,7 @@
     }
   });
   document.addEventListener('click', function (e) { if (!root.contains(e.target)) { panel.hidden = true; bell.setAttribute('aria-expanded', 'false'); } });
-  soundBtn.addEventListener('click', function () { var on = !soundOn(); setSound(on); if (on) { unlock(); setTimeout(chime, 150); } });
+  soundBtn.addEventListener('click', function () { setSound(!soundOn()); });
   setSound(soundOn());
   setInterval(function () { if (!document.hidden) poll(); }, 8000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });

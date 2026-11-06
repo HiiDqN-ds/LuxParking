@@ -71,6 +71,12 @@ def parking_facts(tenant, lot, locale: str) -> str:
         f"Airport: {biz['airport']}",
         f"Currency: {cur}. Time zone: {tenant.timezone}.",
     ]
+    if cur.upper() == "EUR":
+        lines.append(
+            "Global EUR parking tariff: EUR 50 total for stays shorter than seven actual 24-hour days; "
+            "EUR 10 per started 24-hour period for stays of seven days or more. "
+            "This tariff takes precedence over configured base rates and price rules."
+        )
     first_day, examples = price_examples(tenant, lot)
     if examples:
         lines.append(f"Parking price examples (calculated by the booking system for stays starting {first_day.isoformat()}; "
@@ -90,7 +96,7 @@ def parking_facts(tenant, lot, locale: str) -> str:
                                      TenantPage.locale.in_((locale.split("-")[0], tenant.default_locale, "en")))
             .order_by(TenantPage.id).limit(MAX_FAQ_ENTRIES * 3)
         ).scalars().all()
-    if rules:
+    if rules and cur.upper() != "EUR":
         lines.append("Price rules:")
         for rule in rules:
             window = f" ({rule.start_day} to {rule.end_day})" if rule.start_day and rule.end_day else ""

@@ -29,7 +29,7 @@ def test_extras_on_quote_and_booking(client, app):
     start = datetime.now(timezone.utc) + timedelta(days=3)
     body = {"lot_id": lot.id, "space_id": space.id, "from": start.isoformat(), "to": (start + timedelta(days=2)).isoformat()}
     quote = client.post("/v1/quotes", json={**body, "extras": [{"id": shuttle.id, "quantity": 2}]}, headers=H).get_json()["quote"]
-    assert quote["subtotal"] == "19.80" and quote["extras_total"] == "20.00" and quote["total"] == "39.80"
+    assert quote["subtotal"] == "50.00" and quote["extras_total"] == "20.00" and quote["total"] == "70.00"
     too_many = client.post("/v1/quotes", json={**body, "extras": [{"id": shuttle.id, "quantity": 3}]}, headers=H)
     assert too_many.status_code == 400 and "at most 2" in too_many.get_json()["error"]["message"]
     hold = client.post("/v1/holds", json={**body, "email": "a@example.com"}, headers={**H, "Idempotency-Key": "hold-key-0001"}).get_json()["hold"]
@@ -38,4 +38,4 @@ def test_extras_on_quote_and_booking(client, app):
                          headers={**H, "Idempotency-Key": "book-key-0001"})
     assert booked.status_code == 201
     booking = booked.get_json()["booking"]
-    assert booking["total_amount"] == "39.80" and booking["extras"][0]["quantity"] == 2
+    assert booking["total_amount"] == "70.00" and booking["extras"][0]["quantity"] == 2

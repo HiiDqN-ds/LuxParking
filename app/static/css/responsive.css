@@ -1,0 +1,107 @@
+/* Keep shared sizing safe while app.css owns page-specific responsive layouts. */
+html{
+  width:100%;
+  min-width:320px;
+  overflow-x:clip;
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+body{width:100%;min-width:320px;overflow-x:clip}
+img,video,svg{max-width:100%}
+input,select,textarea,button,fieldset,pre{max-width:100%}
+pre{overflow:auto}
+
+:where(
+  .shell,.content-col,.content,.staff-shell,.staff-content,.staff-header,
+  .flow,.flow-inner,.flow-top,.flow-body,.booking-shell,.booking-columns,
+  .dev,.dev-top,.dev-main,.dev-hero,.ref-layout,
+  .home,.home-hero,.home-top,.home-copy,.content-index-page,.content-index-header
+){min-width:0}
+
+:where(
+  .shell,.content-col,.content,.staff-shell,.staff-header,.staff-content,
+  .flow-inner,.flow-top,.flow-body,.booking-columns,.dev-top,.dev-main,
+  .dev-hero,.ref-layout,.home-hero,.home-top,.home-copy,.content-index-header,
+  .content-header,.head,.section-heading,.dashboard-heading,.staff-dashboard-heading
+)>*{min-width:0}
+
+.table-wrap,.dev-table-wrap,.map-wrap,.map-viewport{
+  width:100%;
+  min-width:0;
+  max-width:100%;
+}
+
+.row2>*,.row4>*{min-width:0}
+
+@media(max-width:900px){
+  .content-col,.content,.panel,.staff-shell,.staff-content,.flow-inner,.flow-body,.dev-main,
+  .home-copy,.content-page,.partner-layout,.booking-shell{min-width:0}
+  .table-wrap,.dev-table-wrap,.map-wrap,.map-viewport{
+    overscroll-behavior-inline:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+}
+
+@media(max-width:760px){
+  .row4{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media(max-width:480px){
+  .row4{grid-template-columns:minmax(0,1fr)}
+}
+
+@media(max-width:540px){
+  input[type=date],input[type=datetime-local],input[type=time]{max-width:100%;font-size:16px}
+}
+
+@media(max-width:899px){
+  body:has(.home-sticky-cta) .chat,.booking-page .chat{
+    inset-block-end:calc(6rem + env(safe-area-inset-bottom,0px));
+    inset-inline-end:max(.75rem,env(safe-area-inset-right,0px));
+    z-index:70;
+  }
+  .chat{max-width:calc(100vw - 1.5rem)}
+  .chat-panel{
+    width:min(24rem,calc(100vw - 1.2rem));
+    height:min(560px,calc(100dvh - 7rem - env(safe-area-inset-bottom,0px)));
+    max-height:calc(100dvh - 7rem - env(safe-area-inset-bottom,0px));
+    min-height:min(20rem,calc(100dvh - 7rem - env(safe-area-inset-bottom,0px)));
+  }
+  .chat-launcher{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.55rem;
+    min-width:3.5rem;
+    min-height:3.5rem;
+    padding:.75rem 1rem;
+    border:2px solid rgba(255,255,255,.92);
+    background:#76d7ec;
+    color:#08232d;
+    --chat-dot:#08232d;
+    box-shadow:0 5px 18px rgba(0,0,0,.4),0 0 0 2px rgba(8,35,45,.55);
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+  }
+  .chat-launcher svg{display:block;flex:none;width:1.5rem;height:1.5rem;pointer-events:none}
+  .chat-launcher:focus-visible{outline:3px solid #fff;outline-offset:3px}
+}
+
+@media(max-width:520px){
+  body:has(.home-sticky-cta) .chat,.booking-page .chat{
+    inset-block-end:calc(5.75rem + env(safe-area-inset-bottom,0px));
+    inset-inline-end:max(.6rem,env(safe-area-inset-right,0px));
+  }
+  .chat-launcher{width:3.5rem;height:3.5rem;padding:.65rem;border-radius:50%}
+  .chat-launcher-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  .chat-panel{border-radius:18px}
+}
+
+@media(min-width:521px) and (max-width:899px){
+  .chat-launcher{width:3.5rem;height:3.5rem;padding:.65rem;border-radius:50%}
+  .chat-launcher-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+}
+
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+}

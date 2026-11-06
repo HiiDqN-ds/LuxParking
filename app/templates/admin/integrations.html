@@ -1,0 +1,35 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _('Integrations - ParkPilot') }}{% endblock %}
+{% block content %}
+<header class="page-heading">
+  <h1><span class="h-ico" aria-hidden="true">🔌</span> {{ _('External integrations') }}</h1>
+  <p class="muted">{{ _('Connect external parking platforms when their official API access and credentials are available.') }}</p>
+</header>
+
+<div class="integration-notice" role="note">
+  <strong>{{ _('Not connected') }}</strong>
+  <p>{{ _('Parkos and Parkenlist API documentation and access have not been verified for this application. No endpoints, authentication methods, or synchronization behavior are assumed.') }}</p>
+  <p>{{ _('Credentials must be supplied through a server-side secret manager. They are never stored in browser code or displayed here.') }}</p>
+</div>
+
+<section class="integration-grid" aria-label="{{ _('Available providers') }}">
+  {% for provider in providers %}
+  <article class="panel integration-card">
+    <header>
+      <h2>{{ provider.name }}</h2>
+      {% if provider.connection %}
+      <span class="integration-status status-{{ provider.connection.status }}">{{ provider.connection.status|title }}</span>
+      {% else %}
+      <span class="integration-status status-pending">{{ _('Pending') }}</span>
+      {% endif %}
+    </header>
+    {% if provider.connection and provider.connection.last_sync_at %}
+    <p><strong>{{ _('Last synchronization') }}:</strong> <time datetime="{{ provider.connection.last_sync_at.isoformat() }}">{{ provider.connection.last_sync_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></p>
+    {% else %}
+    <p class="muted">{{ _('No synchronization has run.') }}</p>
+    {% endif %}
+    <p class="muted">{{ _('Reservation import, duplicate prevention, availability, and pricing are represented in the integration foundation; provider-specific synchronization remains disabled until its contract is verified.') }}</p>
+  </article>
+  {% endfor %}
+</section>
+{% endblock %}

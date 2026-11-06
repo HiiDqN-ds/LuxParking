@@ -1,22 +1,80 @@
 {% extends "staff/base.html" %}
 {% block title %}{{ _('Open disputes - ParkPilot') }}{% endblock %}
 {% block content %}
-<p><a href="{{ url_for('staff.dashboard') }}">{{ _('← Bookings') }}</a></p>
-<div class="staff-heading"><div><p class="eyebrow">{{ _('Evidence review') }}</p><h1>{{ _('Open damage disputes') }}</h1></div></div>
+<div class="staff-heading dispute-header">
+  <div>
+    <p class="eyebrow">{{ _('Evidence review') }}</p>
+    <h1>{{ _('Open disputes') }}</h1>
+    <p class="muted">{{ _('Review the latest damage evidence and compare it with the original inspection before closing a claim.') }}</p>
+  </div>
+  <a class="btn btn-primary" href="{{ url_for('staff.dashboard') }}">{{ _('Back to bookings') }}</a>
+</div>
+
 {% if disputes %}
-  {% for dispute in disputes %}
-  <article class="panel dispute-panel">
-    <h2>{{ _('Booking %(p0)s', p0=(dispute.booking.booking_ref)) }}</h2>
-    <p>{{ dispute.booking.customer.first_name }} {{ dispute.booking.customer.last_name }} · {{ dispute.booking.vehicle.plate if dispute.booking.vehicle else _("No plate") }}</p>
-    <p><strong>{{ dispute.damage_mark.kind.replace("_", " ")|title|tr }}</strong> · {{ dispute.damage_mark.notes or _("No note") }}</p>
-    <p>{{ _('Location %(p0)s%%, %(p1)s%%', p0=(dispute.damage_mark.x_percent|round|int), p1=(dispute.damage_mark.y_percent|round|int)) }}</p>
-    {% if dispute.damage_mark.photo_id %}
-      <a class="btn" href="{{ url_for('staff.photo', photo_id=dispute.damage_mark.photo_id) }}">{{ _('Open departure damage photo') }}</a>
-    {% endif %}
-    <a class="btn" href="{{ url_for('staff.inspection_page', booking_id=dispute.booking_id, phase='arrival') }}">{{ _('Compare arrival inspection') }}</a>
-  </article>
-  {% endfor %}
+  <section class="dispute-overview" aria-label="{{ _('Dispute overview') }}">
+    <div class="panel metric-card">
+      <span>{{ _('Open cases') }}</span>
+      <strong>{{ disputes|length }}</strong>
+    </div>
+    <div class="panel metric-card">
+      <span>{{ _('Awaiting review') }}</span>
+      <strong>{{ disputes|length }}</strong>
+    </div>
+    <div class="panel metric-card">
+      <span>{{ _('Vehicle checks') }}</span>
+      <strong>{{ disputes|length }}</strong>
+    </div>
+  </section>
+
+  <div class="dispute-grid">
+    {% for dispute in disputes %}
+      <article class="panel dispute-card">
+        <div class="dispute-card-header">
+          <div>
+            <p class="eyebrow">{{ _('Damage claim') }}</p>
+            <h2>{{ _('Booking %(p0)s', p0=(dispute.booking.booking_ref)) }}</h2>
+          </div>
+          <span class="status-pill">{{ _('Open') }}</span>
+        </div>
+
+        <dl class="dispute-meta">
+          <div>
+            <dt>{{ _('Customer') }}</dt>
+            <dd>{{ dispute.booking.customer.first_name }} {{ dispute.booking.customer.last_name }}</dd>
+          </div>
+          <div>
+            <dt>{{ _('Vehicle') }}</dt>
+            <dd>{{ dispute.booking.vehicle.plate if dispute.booking.vehicle else _("No plate") }}</dd>
+          </div>
+          <div>
+            <dt>{{ _('Issue') }}</dt>
+            <dd>{{ dispute.damage_mark.kind.replace("_", " ")|title|tr }}</dd>
+          </div>
+          <div>
+            <dt>{{ _('Location') }}</dt>
+            <dd>{{ _('%(p0)s%%, %(p1)s%%', p0=(dispute.damage_mark.x_percent|round|int), p1=(dispute.damage_mark.y_percent|round|int)) }}</dd>
+          </div>
+        </dl>
+
+        <div class="dispute-note">
+          <h3>{{ _('Summary') }}</h3>
+          <p>{{ dispute.damage_mark.notes or _("No note") }}</p>
+        </div>
+
+        <div class="dispute-actions">
+          {% if dispute.damage_mark.photo_id %}
+            <a class="btn" href="{{ url_for('staff.photo', photo_id=dispute.damage_mark.photo_id) }}">{{ _('Open photo') }}</a>
+          {% endif %}
+          <a class="btn btn-primary" href="{{ url_for('staff.inspection_page', booking_id=dispute.booking_id, phase='arrival') }}">{{ _('Compare arrival') }}</a>
+          <a class="btn" href="{{ url_for('staff.booking_detail', booking_id=dispute.booking_id) }}">{{ _('Open booking') }}</a>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
 {% else %}
-  <p class="empty">{{ _('There are no open damage disputes.') }}</p>
+  <section class="panel empty-state" aria-live="polite">
+    <h2>{{ _('No open disputes') }}</h2>
+    <p>{{ _('There are no open damage disputes at the moment.') }}</p>
+  </section>
 {% endif %}
 {% endblock %}

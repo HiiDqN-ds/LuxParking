@@ -5,25 +5,33 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/lot-tour.css') }}">
 {% endblock %}
 {% block body %}
+{% set language_flags = {'de': 'de', 'en': 'gb', 'nl': 'nl', 'fr': 'fr', 'es': 'es', 'ar': 'sa', 'he': 'il', 'fa': 'ir', 'ur': 'pk', 'tr': 'tr'} %}
 <main id="main" class="home">
   <section class="home-hero">
     <canvas id="lot3d" class="home-canvas" aria-hidden="true"></canvas>
     <header class="home-top">
       <a class="home-logo" href="{{ url_for('public.localized_home', locale=locale) }}">{% if biz.logo_enabled or (tenant and tenant.logo_url) %}{{ brand_logo(tenant, dark=True) }}{% else %}<span class="home-brand">{{ tenant.name if tenant else 'ParkPilot' }}</span>{% endif %}</a>
-      <nav class="home-nav" aria-label="{{ t(locale, 'lp.nav.label') }}">
-        <a href="#vorteile">{{ t(locale, 'lp.nav.features') }}</a>
-        <a href="#ablauf">{{ t(locale, 'lp.nav.process') }}</a>
-        <a href="#anfahrt">{{ t(locale, 'lp.nav.location') }}</a>
-        <a href="#faq">{{ t(locale, 'lp.nav.faq') }}</a>
-      </nav>
+      <form class="topbar-search home-top-search" action="{{ url_for('public.localized_search', locale=locale) }}" method="get" role="search">
+        <label class="sr-only" for="site-search">{{ t(locale, 'search.label') }}</label>
+        <div class="topbar-search-controls">
+          <input id="site-search" type="search" name="q" maxlength="100" placeholder="{{ t(locale, 'search.placeholder') }}" required>
+          <button type="submit">{{ t(locale, 'search.submit') }}</button>
+        </div>
+      </form>
       <div class="home-tools">
         {% if language_links %}
-        <nav class="language-switcher" aria-label="{{ t(locale, 'language.label') }}">
+        <details class="home-language-menu">
+          <summary aria-label="{{ t(locale, 'language.label') }}" title="{{ t(locale, 'language.label') }}">
           {% for language in language_links %}
-          <a href="{{ language.url }}" hreflang="{{ language.code }}" lang="{{ language.code }}"
-             {% if language.code == locale %}aria-current="page"{% endif %}>{{ language.label }}</a>
+          {% if language.code == locale %}<img class="home-language-flag" src="{{ url_for('static', filename='img/flags/' ~ language_flags.get(language.code, 'un') ~ '.svg') }}" alt="" width="24" height="16"><span class="sr-only">{{ language.label }}</span>{% endif %}
           {% endfor %}
-        </nav>
+          </summary>
+          <nav class="home-language-panel" aria-label="{{ t(locale, 'language.label') }}">
+            {% for language in language_links %}
+            <a href="{{ language.url }}" hreflang="{{ language.code }}" lang="{{ language.code }}" aria-label="{{ language.label }}" title="{{ language.label }}"{% if language.code == locale %} aria-current="page"{% endif %}><img class="home-language-flag" src="{{ url_for('static', filename='img/flags/' ~ language_flags.get(language.code, 'un') ~ '.svg') }}" alt="" width="24" height="16"><span class="sr-only">{{ language.label }}</span></a>
+            {% endfor %}
+          </nav>
+        </details>
         {% endif %}
         {% if lot %}<a class="btn btn-primary home-top-cta" href="{{ url_for('public.localized_reserve', locale=locale, tenant_slug=tenant.slug, lot_slug=lot.slug) }}">{{ t(locale, 'home.book') }}</a>{% endif %}
         <details class="home-menu">
@@ -33,11 +41,6 @@
             <a href="#ablauf">{{ t(locale, 'lp.nav.process') }}</a>
             <a href="#anfahrt">{{ t(locale, 'lp.nav.location') }}</a>
             <a href="#faq">{{ t(locale, 'lp.nav.faq') }}</a>
-            {% if language_links %}
-            <span class="home-menu-lang" role="group" aria-label="{{ t(locale, 'language.label') }}">
-              {% for language in language_links %}<a href="{{ language.url }}" hreflang="{{ language.code }}" lang="{{ language.code }}"{% if language.code == locale %} aria-current="page"{% endif %}>{{ language.label }}</a>{% endfor %}
-            </span>
-            {% endif %}
           </nav>
         </details>
       </div>
@@ -113,7 +116,6 @@
     <div class="lp-wrap lp-loc">
       <div>
         <h2 id="loc-title" class="lp-title">{{ t(locale, 'lp.loc.title') }}</h2>
-        <p class="lp-sub">{{ t(locale, 'lp.loc.subtitle') }}</p>
         <address class="lp-contact">
           <div>{{ icon('pin') }}<span><strong>{{ t(locale, 'lp.loc.address') }}</strong>{{ biz.street }}<br>{{ biz.postal_code }} {{ biz.city }}</span></div>
           <div>{{ icon('phone') }}<span><strong>{{ t(locale, 'lp.loc.phone') }}</strong><a href="{{ biz.phone_href }}" dir="ltr">{{ biz.phone }}</a></span></div>

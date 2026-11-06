@@ -315,5 +315,14 @@
   "chat.assistant": "Assistent",
   "chat.q1": "Wat kost parkeren per dag?",
   "chat.q2": "Hoe werkt de luchthavenshuttle?",
-  "chat.q3": "Hoe boek ik?"
+  "chat.q3": "Hoe boek ik?",
+  "search.title": "Website doorzoeken",
+  "search.description": "Doorzoek openbare pagina's, veelgestelde vragen, boekingsinformatie en juridische informatie.",
+  "search.label": "Deze website doorzoeken",
+  "search.placeholder": "Bijvoorbeeld 'voorwaarden', 'parkeren' of 'shuttle'",
+  "search.submit": "Zoeken",
+  "search.results": "Zoekresultaten",
+  "search.empty": "Doorzoek openbare pagina's, veelgestelde vragen, boekingsinformatie en juridische informatie.",
+  "search.no_results": "Geen overeenkomende openbare informatie gevonden. Probeer een andere zoekopdracht.",
+  "search.legal_summary": "Juridische informatie en contactgegevens."
 }

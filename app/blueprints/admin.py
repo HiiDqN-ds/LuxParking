@@ -3,10 +3,10 @@ import calendar
 import csv
 import re
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 
-from flask import Blueprint, Response, abort, current_app, flash, make_response, redirect, render_template, request, url_for
+from flask import Blueprint, Response, abort, current_app, flash, jsonify, make_response, redirect, render_template, request, session, url_for
 from flask_login import current_user
 from sqlalchemy import case, delete, desc, func, or_, select, update
 
@@ -46,6 +46,8 @@ from ..models import (
     Customer,
     DiscountCode,
     Dispute,
+    EXTERNAL_INTEGRATION_PROVIDERS,
+    ExternalIntegrationConnection,
     Lot,
     PriceRule,
     Role,
@@ -92,6 +94,18 @@ def require_login():
         "admin.platform_tenant_status",
     } and not (request.endpoint or "").startswith("admin.platform_"):
         abort(403)
+
+
+@bp.app_context_processor
+def inject_owner_locations():
+    if not current_user.is_authenticated or not current_user.is_owner:
+        return {}
+    locations = Lot.query.order_by(Lot.name).all()
+    selected_id = session.get("owner_dashboard_lot_id")
+    if selected_id not in {lot.id for lot in locations}:
+        selected_id = None
+        session.pop("owner_dashboard_lot_id", None)
+    return {"owner_locations": locations, "owner_selected_location_id": selected_id}
 
 
 def owner_required(view):
@@ -201,39 +215,186 @@ def dashboard():
         return _platform_dashboard()
 
     lots = Lot.query.order_by(Lot.name).all()
-    counts = dict(db.session.execute(select(Space.lot_id, func.count()).group_by(Space.lot_id)).all())
-    by_status = {(lot_id, st): n for lot_id, st, n in db.session.execute(
-        select(Space.lot_id, Space.status, func.count()).group_by(Space.lot_id, Space.status))}
-    booking_counts = dict(
-        db.session.execute(select(Booking.status, func.count()).group_by(Booking.status)).all()
+    selected_lot_id = session.get("owner_dashboard_lot_id")
+    selected_lot = None
+    lot_filter = []
+    if selected_lot_id:
+        selected_lot = db.session.execute(
+            select(Lot).where(
+                Lot.id == selected_lot_id,
+                Lot.tenant_id == current_user.tenant_id,
+            )
+        ).scalar_one_or_none()
+        if selected_lot is None:
+            abort(404)
+        lot_filter = [Booking.lot_id == selected_lot.id]
+
+    bookings_total = db.session.scalar(
+        select(func.count()).select_from(Booking).where(*lot_filter)
     )
     paid_total = db.session.scalar(
         select(func.coalesce(func.sum(Booking.total_amount), 0)).where(
-            Booking.payment_status == "paid"
+            Booking.payment_status == "paid",
+            *lot_filter,
         )
     )
+    now = utcnow()
+    next_day = now + timedelta(hours=24)
     upcoming_count = db.session.scalar(
         select(func.count()).select_from(Booking).where(
             Booking.status == "reserved",
-            Booking.pickup_at >= utcnow(),
+            Booking.pickup_at >= now,
+            Booking.pickup_at < next_day,
+            *lot_filter,
+        )
+    )
+    upcoming_departure_count = db.session.scalar(
+        select(func.count()).select_from(Booking).where(
+            Booking.status.in_(("reserved", "checked_in")),
+            Booking.return_at >= now,
+            Booking.return_at < next_day,
+            *lot_filter,
         )
     )
     open_disputes = db.session.scalar(
-        select(func.count()).select_from(Dispute).where(Dispute.status == "open")
+        select(func.count()).select_from(Dispute)
+        .join(Booking, Booking.id == Dispute.booking_id)
+        .where(Dispute.status == "open", *lot_filter)
     )
-    recent_bookings = Booking.query.order_by(Booking.created_at.desc()).limit(8).all()
+    recent_bookings = Booking.query.filter(*lot_filter).order_by(Booking.created_at.desc()).limit(8).all()
+    upcoming_arrivals = Booking.query.filter(
+        Booking.status == "reserved",
+        Booking.pickup_at >= now,
+        Booking.pickup_at < next_day,
+        *lot_filter,
+    ).order_by(Booking.pickup_at, Booking.id).limit(6).all()
+    upcoming_departures = Booking.query.filter(
+        Booking.status.in_(("reserved", "checked_in")),
+        Booking.return_at >= now,
+        Booking.return_at < next_day,
+        *lot_filter,
+    ).order_by(Booking.return_at, Booking.id).limit(6).all()
     return render_template(
         "admin/dashboard.html",
         lots=lots,
-        counts=counts,
-        by_status=by_status,
-        statuses=SPACE_STATUSES,
-        status_labels=STATUS_LABELS,
-        booking_counts=booking_counts,
+        selected_lot=selected_lot,
+        bookings_total=bookings_total,
         paid_total=paid_total,
         upcoming_count=upcoming_count,
+        upcoming_departure_count=upcoming_departure_count,
         open_disputes=open_disputes,
         recent_bookings=recent_bookings,
+        upcoming_arrivals=upcoming_arrivals,
+        upcoming_departures=upcoming_departures,
+    )
+
+
+@bp.post("/location")
+@owner_required
+def set_dashboard_location():
+    selected_id = request.form.get("lot_id", "").strip()
+    if not selected_id:
+        session.pop("owner_dashboard_lot_id", None)
+        return redirect(url_for("admin.dashboard"))
+    if not selected_id.isdigit():
+        abort(404)
+    location = db.session.execute(
+        select(Lot).where(
+            Lot.id == int(selected_id),
+            Lot.tenant_id == current_user.tenant_id,
+        )
+    ).scalar_one_or_none()
+    if location is None:
+        abort(404)
+    session["owner_dashboard_lot_id"] = location.id
+    return redirect(url_for("admin.dashboard"))
+
+
+@bp.get("/search")
+@owner_required
+def owner_search():
+    term = request.args.get("q", "").strip()[:100]
+    if len(term) < 2 and not term.isdigit():
+        return jsonify(results=[])
+
+    escaped_term = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    pattern = f"%{escaped_term}%"
+    phone_term = re.sub(r"\D", "", term)
+    phone_match = None
+    if len(phone_term) >= 2:
+        normalized_phone = func.replace(
+            func.replace(
+                func.replace(
+                    func.replace(func.replace(Customer.phone, " ", ""), "-", ""),
+                    "+",
+                    "",
+                ),
+                "(",
+                "",
+            ),
+            ")",
+            "",
+        )
+        phone_match = normalized_phone.like(f"%{phone_term}%")
+
+    matches = [
+        Booking.booking_ref.ilike(pattern, escape="\\"),
+        Customer.first_name.ilike(pattern, escape="\\"),
+        Customer.last_name.ilike(pattern, escape="\\"),
+        (Customer.first_name + " " + Customer.last_name).ilike(pattern, escape="\\"),
+        Customer.email.ilike(pattern, escape="\\"),
+        Customer.billing_email.ilike(pattern, escape="\\"),
+        Vehicle.plate.ilike(pattern, escape="\\"),
+    ]
+    if phone_match is not None:
+        matches.append(phone_match)
+    if term.isdigit():
+        matches.append(Booking.id == int(term))
+
+    bookings = db.session.execute(
+        select(Booking)
+        .join(Customer, Customer.id == Booking.customer_id)
+        .outerjoin(Vehicle, Vehicle.id == Booking.vehicle_id)
+        .where(
+            Booking.tenant_id == current_user.tenant_id,
+            or_(*matches),
+        )
+        .order_by(Booking.created_at.desc(), Booking.id.desc())
+        .limit(8)
+    ).scalars().unique().all()
+    response = jsonify(
+        results=[
+            {
+                "id": booking.id,
+                "reference": booking.booking_ref,
+                "customer": f"{booking.customer.first_name} {booking.customer.last_name}".strip(),
+                "plate": booking.vehicle.plate if booking.vehicle else "",
+                "lot": booking.lot.name if booking.lot else "",
+                "pickup": booking.pickup_at.strftime("%Y-%m-%d %H:%M"),
+                "status": booking.status.replace("_", " ").title(),
+                "url": url_for("manage.booking_detail", booking_id=booking.id),
+            }
+            for booking in bookings
+        ]
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@bp.get("/integrations")
+@owner_required
+def integrations():
+    connections = {
+        connection.provider: connection
+        for connection in ExternalIntegrationConnection.query.order_by(ExternalIntegrationConnection.provider).all()
+    }
+    provider_names = {"parkos": "Parkos", "parkenlist": "Parkenlist"}
+    return render_template(
+        "admin/integrations.html",
+        providers=[
+            {"key": provider, "name": provider_names[provider], "connection": connections.get(provider)}
+            for provider in EXTERNAL_INTEGRATION_PROVIDERS
+        ],
     )
 
 

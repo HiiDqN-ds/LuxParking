@@ -8,28 +8,30 @@
 {% block body %}
 <div class="staff-shell">
   <header class="staff-header">
-    {% if request.endpoint != 'staff.dashboard' %}
-    <a class="back-btn" id="staff-back" href="{{ url_for('staff.dashboard') }}" aria-label="{{ _('Back') }}">{{ _('← Back') }}</a>
-    {% elif current_user.role == "owner" %}
-    <a class="back-btn" href="{{ url_for('admin.dashboard') }}">{{ _('← Admin dashboard') }}</a>
-    {% endif %}
-    <a class="brand" href="{{ url_for('staff.dashboard') }}">{{ current_user.tenant.name if current_user.tenant else 'ParkPilot' }} <small>{{ _('Staff app · %(p0)s', p0=(current_user.role|title|tr)) }}</small></a>
-    {% include "_alerts_bell.html" %}
-    {% include "_lang_switch.html" %}
+    <div class="staff-brand-group">
+      {% if request.endpoint != 'staff.dashboard' %}
+      <a class="back-btn" id="staff-back" href="{{ url_for('staff.dashboard') }}" aria-label="{{ _('Back') }}">{{ _('← Back') }}</a>
+      {% elif current_user.role == "owner" %}
+      <a class="back-btn staff-admin-back" href="{{ url_for('admin.dashboard') }}">{{ _('← Admin dashboard') }}</a>
+      {% endif %}
+      <a class="brand" href="{{ url_for('staff.dashboard') }}"><span class="staff-brand-name">{{ current_user.tenant.name if current_user.tenant else 'ParkPilot' }}</span><small>{{ _('Staff app · %(p0)s', p0=(current_user.role|title|tr)) }}</small></a>
+    </div>
     <nav aria-label="{{ _('Staff navigation') }}" class="staff-nav-desktop">
-      <a href="{{ url_for('staff.dashboard') }}">{{ _('Staff home') }}</a>
       <a href="{{ url_for('alerts.center') }}">{{ _('Notification centre') }}</a>
-      <a href="{{ url_for('auth.account') }}" class="staff-account">{{ avatar(current_user, 'sm') }} {{ _('Account') }}</a>
+      <a href="{{ url_for('auth.account') }}" class="staff-account">{{ avatar(current_user, 'sm') }} <span>{{ _('Account') }}</span></a>
       {% if current_user.role == "owner" %}
       <a href="{{ url_for('staff.walk_in_hold') }}">{{ _('Walk-in') }}</a>
       <a href="{{ url_for('staff.disputes') }}">{{ _('Disputes') }}</a>
-      <a href="{{ url_for('admin.dashboard') }}">{{ _('Admin dashboard') }}</a>
       {% endif %}
+    </nav>
+    <div class="staff-header-tools">
+      {% include "_alerts_bell.html" %}
+      {% include "_lang_switch.html" %}
       <form method="post" action="{{ url_for('auth.logout') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="btn btn-quiet">{{ _('Sign out') }}</button>
       </form>
-    </nav>
+    </div>
   </header>
   <main id="main" class="staff-content">
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -42,8 +44,12 @@
   </main>
   <nav class="staff-tabbar" aria-label="{{ _('Quick navigation') }}">
     <a href="{{ url_for('staff.dashboard') }}" {% if request.endpoint == 'staff.dashboard' %}aria-current="page"{% endif %}>{{ _('Home') }}</a>
-    {% if current_user.role == "owner" %}<a href="{{ url_for('staff.walk_in_hold') }}">{{ _('Walk-in') }}</a><a href="{{ url_for('admin.dashboard') }}">{{ _('Admin dashboard') }}</a>{% endif %}
-    <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">{{ _('Sign out') }}</button></form>
+    <a href="{{ url_for('alerts.center') }}">{{ _('Notifications') }}</a>
+    {% if current_user.role == "owner" %}
+    <a href="{{ url_for('staff.walk_in_hold') }}">{{ _('Walk-in') }}</a>
+    <a href="{{ url_for('staff.disputes') }}">{{ _('Disputes') }}</a>
+    <a href="{{ url_for('admin.dashboard') }}">{{ _('Dashboard') }}</a>
+    {% endif %}
   </nav>
 </div>
 <script nonce="{{ csp_nonce() }}">window.PP_UI = {{ js_dictionary()|tojson }};</script>

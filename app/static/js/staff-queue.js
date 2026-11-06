@@ -64,7 +64,7 @@
       for (const [key, value] of Object.entries(item.fields)) {
         form.append(key, value);
       }
-      form.append("photo", item.blob, item.filename);
+      form.append(item.fileField || "photo", item.blob, item.filename);
       try {
         const response = await fetch(item.url, {
           method: "POST",

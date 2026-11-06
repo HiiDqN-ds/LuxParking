@@ -1,18 +1,18 @@
 {% extends "staff/base.html" %}
 {% block title %}{{ _('Walk-in hold - ParkPilot Staff') }}{% endblock %}
 {% block content %}
-<div class="staff-heading">
+<div class="staff-heading staff-dashboard-heading staff-walkin-heading">
   <div>
     <p class="eyebrow">{{ _('Temporary reservation') }}</p>
     <h1>{{ _('Walk-in customer') }}</h1>
     <p class="muted">{{ _('Choose a space and parking dates. Availability and price are checked again on submission.') }}</p>
   </div>
 </div>
-<section class="panel">
+<section class="panel staff-walkin-panel">
   {% if spaces %}
-  <form class="form" method="post" action="{{ url_for('staff.walk_in_hold') }}">
+  <form class="form staff-walkin-form" method="post" action="{{ url_for('staff.walk_in_hold') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label class="field" for="walk-in-space">{{ _('Parking space') }}
+    <label class="field staff-walkin-space" for="walk-in-space">{{ _('Parking space') }}
       <select id="walk-in-space" name="space_id" required>
         <option value="">{{ _('Choose a space') }}</option>
         {% for space, lot in spaces %}
@@ -28,15 +28,17 @@
     <label class="field" for="walk-in-return">{{ _('Return (%(p0)s)', p0=(timezone_name)) }}
       <input id="walk-in-return" name="return_at" type="datetime-local" value="{{ values.return_at }}" required>
     </label>
-    <label class="field" for="walk-in-email">{{ _('Customer email') }}
+    <label class="field staff-walkin-email" for="walk-in-email">{{ _('Customer email') }}
       <input id="walk-in-email" name="email" type="email" autocomplete="email" maxlength="255" value="{{ values.email }}" required>
       <small>{{ _('Used only to identify this temporary hold; no booking or customer record is created.') }}</small>
     </label>
-    <button class="btn btn-primary" type="submit">{{ _('Hold space for 10 minutes') }}</button>
+    <div class="staff-walkin-submit">
+      <button class="btn btn-primary" type="submit">{{ _('Hold space for 10 minutes') }}</button>
+      <p class="muted">{{ _('This step creates only a 10-minute temporary hold. It does not confirm a booking or collect payment.') }}</p>
+    </div>
   </form>
   {% else %}
   <p class="empty">{{ _('There are no active, bookable spaces in this tenant.') }}</p>
   {% endif %}
-  <p class="muted">{{ _('This step creates only a 10-minute temporary hold. It does not confirm a booking or collect payment.') }}</p>
 </section>
 {% endblock %}

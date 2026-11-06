@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_avatar.html" import avatar with context %}
+{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-mobile.css') }}">{% endblock %}
 {% block body_class %}admin{% endblock %}
 {% block body %}
 <div class="shell">
@@ -17,18 +18,18 @@
     <a href="{{ url_for('admin.calendar_view') }}" {% if request.endpoint == 'admin.calendar_view' %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🗓️</span>{{ _('Occupancy') }}</a>
     <a href="{{ url_for('admin.lots') }}" {% if request.endpoint in ('admin.lots','admin.lot_new','admin.lot_edit','admin.lot_delete') %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🅿️</span>{{ _('Lots') }}</a>
     {% if current_user.is_owner %}
+    {% set management_endpoints = ('manage.extras','manage.extra_edit','admin.pricing_rules','admin.pricing_rule_edit','admin.discounts','admin.discount_toggle','admin.discount_edit','alerts.center','manage.invoices','manage.invoice_settings','reports.overview','admin.content_list','admin.content_new','admin.content_edit','admin.team','admin.team_member_active','admin.team_member_edit','admin.team_member_delete','admin.inspection_settings') %}
+    <details class="side-group" {% if request.endpoint in management_endpoints %}open{% endif %}>
+      <summary><span class="nav-ico" aria-hidden="true">⚙️</span>{{ _('Manage') }}</summary>
     <a href="{{ url_for('manage.extras') }}" {% if request.endpoint in ('manage.extras','manage.extra_edit') %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🧳</span>{{ _('Extras (shuttle, cleaning)') }}</a>
     <a href="{{ url_for('admin.pricing_rules') }}" {% if request.endpoint in ('admin.pricing_rules','admin.pricing_rule_edit') %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">💶</span>{{ _('Pricing rules') }}</a>
     <a href="{{ url_for('admin.discounts') }}" {% if request.endpoint in ('admin.discounts','admin.discount_toggle','admin.discount_edit') %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🏷️</span>{{ _('Discount codes') }}</a>
-    <a href="{{ url_for('alerts.center') }}" {% if request.endpoint == 'alerts.center' %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🔔</span>{{ _('Notification centre') }}</a>
     <a href="{{ url_for('manage.invoices') }}" {% if request.endpoint in ('manage.invoices','manage.invoice_settings') %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🧾</span>{{ _('Invoices') }}</a>
     <a href="{{ url_for('reports.overview') }}" {% if request.endpoint == 'reports.overview' %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">📊</span>{{ _('Reports') }}</a>
-    <a href="{{ url_for('billing.overview') }}" {% if request.endpoint == 'billing.overview' %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">💳</span>{{ _('Plan & billing') }}</a>
-    <a href="{{ url_for('admin.brand_settings') }}" {% if request.endpoint == 'admin.brand_settings' %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🎨</span>{{ _('Brand & domain') }}</a>
-    <a href="{{ url_for('admin.translations') }}" {% if request.endpoint in ('admin.translations','admin.translation_delete') %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🌍</span>{{ _('Translations') }}</a>
     <a href="{{ url_for('admin.content_list') }}" {% if request.endpoint in ('admin.content_list','admin.content_new','admin.content_edit') %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">📝</span>{{ _('Blog & FAQs') }}</a>
     <a href="{{ url_for('admin.team') }}" {% if request.endpoint in ('admin.team','admin.team_member_active','admin.team_member_edit','admin.team_member_delete') %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">👥</span>{{ _('Team') }}</a>
     <a href="{{ url_for('admin.inspection_settings') }}" {% if request.endpoint == 'admin.inspection_settings' %}aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">🚗</span>{{ _('Vehicle checks') }}</a>
+    </details>
     {% endif %}
     <a href="{{ url_for('staff.disputes') }}"><span class="nav-ico" aria-hidden="true">⚠️</span>{{ _('Disputes') }}</a>
     <a href="{{ url_for('staff.dashboard') }}"><span class="nav-ico" aria-hidden="true">📱</span>{{ _('Staff app') }}</a>
@@ -36,10 +37,40 @@
     {% block nav_extra %}{% endblock %}
   </nav>
   <div class="content-col">
+  <div class="admin-mobile-brand" aria-label="{{ _('ParkPilot') }}">
+    <span class="brand-badge" aria-hidden="true">P</span>
+    <strong>{{ _('ParkPilot') }}</strong>
+  </div>
   <header class="topbar">
     <div class="topbar-title"><span class="topbar-tenant">{{ current_user.tenant.name if current_user.tenant else _('ParkPilot Platform') }}</span></div>
     <div class="topbar-user">
+      <div class="topbar-main-controls">
+      {% if current_user.is_owner %}
+      <a class="owner-home-link" href="{{ url_for('public.home') }}"><span aria-hidden="true">⌂</span> {{ _('Home') }}</a>
+      <form class="owner-location-switcher" method="post" action="{{ url_for('admin.set_dashboard_location') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="sr-only" for="owner-location-select">{{ _('Business location') }}</label>
+        <select id="owner-location-select" name="lot_id" aria-label="{{ _('Business location') }}" data-autosubmit>
+          <option value="" {% if not owner_selected_location_id %}selected{% endif %}>{{ _('All locations') }}</option>
+          {% for location in owner_locations %}
+          <option value="{{ location.id }}" {% if owner_selected_location_id == location.id %}selected{% endif %}>{{ location.name }}</option>
+          {% endfor %}
+        </select>
+        <noscript><button type="submit">{{ _('Switch') }}</button></noscript>
+      </form>
+      <div class="owner-global-search" data-owner-search data-url="{{ url_for('admin.owner_search') }}"
+        data-loading="{{ _('Searching...') }}" data-empty="{{ _('No matching reservations.') }}"
+        data-error="{{ _('Search is temporarily unavailable.') }}" data-results="{{ _('%(count)s reservations found', count='{count}') }}">
+        <label class="sr-only" for="owner-global-search">{{ _('Search reservations') }}</label>
+        <input id="owner-global-search" type="search" autocomplete="off" placeholder="{{ _('Search reservations') }}" aria-autocomplete="list" aria-controls="owner-search-results" aria-expanded="false">
+        <svg class="owner-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+        <ul id="owner-search-results" class="owner-search-results" role="list" hidden></ul>
+        <span class="sr-only owner-search-status" aria-live="polite"></span>
+      </div>
+      {% endif %}
       {% include "_alerts_bell.html" %}
+      </div>
+      <div class="topbar-account-controls">
       {% include "_lang_switch.html" %}
       <a class="user-chip" href="{{ url_for('auth.account') }}" title="{{ _('My profile') }}" aria-label="{{ _('My profile') }}">{{ avatar(current_user) }}
         <span class="user-meta"><strong>{{ current_user.name or current_user.email }}</strong><small>{{ current_user.role|replace('_', ' ')|title|tr }}</small></span></a>
@@ -47,8 +78,42 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="btn-signout" type="submit" aria-label="{{ _('Sign out') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span class="signout-label">{{ _('Sign out') }}</span></button>
       </form>
+      </div>
     </div>
   </header>
+  <nav class="admin-mobile-nav{% if current_user.is_owner %} admin-mobile-nav-owner{% elif current_user.role == 'platform_owner' %} admin-mobile-nav-platform{% else %} admin-mobile-nav-staff{% endif %}" aria-label="{{ _('Main') }}">
+    {% if current_user.is_owner %}
+    <a href="{{ url_for('admin.dashboard') }}" {% if request.endpoint == 'admin.dashboard' %}aria-current="page"{% endif %}><span aria-hidden="true">📊</span>{{ _('Dashboard') }}</a>
+    <a href="{{ url_for('admin.bookings') }}" {% if request.endpoint in ('admin.bookings','admin.bookings_csv','manage.booking_new','manage.booking_detail') %}aria-current="page"{% endif %}><span aria-hidden="true">📅</span>{{ _('Bookings') }}</a>
+    <a href="{{ url_for('admin.calendar_view') }}" {% if request.endpoint == 'admin.calendar_view' %}aria-current="page"{% endif %}><span aria-hidden="true">🗓️</span>{{ _('Occupancy') }}</a>
+    <a href="{{ url_for('admin.lots') }}" {% if request.endpoint in ('admin.lots','admin.lot_new','admin.lot_edit','admin.lot_delete') %}aria-current="page"{% endif %}><span aria-hidden="true">🅿️</span>{{ _('Lots') }}</a>
+    <details class="admin-mobile-more" {% if request.endpoint in management_endpoints or request.endpoint in ('staff.disputes','staff.dashboard') %}open{% endif %}>
+      <summary><span aria-hidden="true">☰</span>{{ _('Manage') }}</summary>
+      <div class="mobile-more-menu">
+        <a href="{{ url_for('manage.extras') }}" {% if request.endpoint in ('manage.extras','manage.extra_edit') %}aria-current="page"{% endif %}><span aria-hidden="true">🧳</span>{{ _('Extras') }}</a>
+        <a href="{{ url_for('admin.pricing_rules') }}" {% if request.endpoint in ('admin.pricing_rules','admin.pricing_rule_edit') %}aria-current="page"{% endif %}><span aria-hidden="true">💶</span>{{ _('Pricing rules') }}</a>
+        <a href="{{ url_for('admin.discounts') }}" {% if request.endpoint in ('admin.discounts','admin.discount_toggle','admin.discount_edit') %}aria-current="page"{% endif %}><span aria-hidden="true">🏷️</span>{{ _('Discount codes') }}</a>
+        <a href="{{ url_for('manage.invoices') }}" {% if request.endpoint in ('manage.invoices','manage.invoice_settings') %}aria-current="page"{% endif %}><span aria-hidden="true">🧾</span>{{ _('Invoices') }}</a>
+        <a href="{{ url_for('reports.overview') }}" {% if request.endpoint == 'reports.overview' %}aria-current="page"{% endif %}><span aria-hidden="true">📈</span>{{ _('Reports') }}</a>
+        <a href="{{ url_for('admin.content_list') }}" {% if request.endpoint in ('admin.content_list','admin.content_new','admin.content_edit') %}aria-current="page"{% endif %}><span aria-hidden="true">📝</span>{{ _('Blog & FAQs') }}</a>
+        <a href="{{ url_for('admin.team') }}" {% if request.endpoint in ('admin.team','admin.team_member_active','admin.team_member_edit','admin.team_member_delete') %}aria-current="page"{% endif %}><span aria-hidden="true">👥</span>{{ _('Team') }}</a>
+        <a href="{{ url_for('admin.inspection_settings') }}" {% if request.endpoint == 'admin.inspection_settings' %}aria-current="page"{% endif %}><span aria-hidden="true">🚗</span>{{ _('Vehicle checks') }}</a>
+        <a href="{{ url_for('staff.disputes') }}" {% if request.endpoint == 'staff.disputes' %}aria-current="page"{% endif %}><span aria-hidden="true">⚠️</span>{{ _('Disputes') }}</a>
+        <a href="{{ url_for('staff.dashboard') }}" {% if request.endpoint == 'staff.dashboard' %}aria-current="page"{% endif %}><span aria-hidden="true">📱</span>{{ _('Staff app') }}</a>
+      </div>
+    </details>
+    {% elif current_user.role == 'platform_owner' %}
+    <a href="{{ url_for('admin.dashboard') }}" {% if request.endpoint == 'admin.dashboard' %}aria-current="page"{% endif %}><span aria-hidden="true">🏢</span>{{ _('Overview') }}</a>
+    <a href="{{ url_for('admin.platform_api') }}" {% if request.endpoint and (request.endpoint.startswith('admin.platform_api') or request.endpoint.startswith('admin.platform_webhook')) %}aria-current="page"{% endif %}><span aria-hidden="true">🔑</span>{{ _('API & webhooks') }}</a>
+    <a href="{{ url_for('admin.platform_usage') }}" {% if request.endpoint == 'admin.platform_usage' %}aria-current="page"{% endif %}><span aria-hidden="true">📈</span>{{ _('API usage') }}</a>
+    <a href="{{ url_for('billing.platform_subscriptions') }}" {% if request.endpoint == 'billing.platform_subscriptions' %}aria-current="page"{% endif %}><span aria-hidden="true">💳</span>{{ _('Subscriptions') }}</a>
+    <a href="{{ url_for('staff.dashboard') }}"><span aria-hidden="true">📱</span>{{ _('Staff app') }}</a>
+    {% else %}
+    <a href="{{ url_for('admin.dashboard') }}" {% if request.endpoint == 'admin.dashboard' %}aria-current="page"{% endif %}><span aria-hidden="true">📊</span>{{ _('Dashboard') }}</a>
+    <a href="{{ url_for('staff.dashboard') }}" {% if request.endpoint == 'staff.dashboard' %}aria-current="page"{% endif %}><span aria-hidden="true">📱</span>{{ _('Staff app') }}</a>
+    <a href="{{ url_for('staff.disputes') }}" {% if request.endpoint == 'staff.disputes' %}aria-current="page"{% endif %}><span aria-hidden="true">⚠️</span>{{ _('Disputes') }}</a>
+    {% endif %}
+  </nav>
   <main id="main" class="content">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for cat, msg in messages %}<div class="flash {{ cat }}" role="status">{{ msg }}</div>{% endfor %}
@@ -59,4 +124,5 @@
 </div>
 <script defer src="{{ url_for('static', filename='js/tables.js') }}"></script>
 <script defer src="{{ url_for('static', filename='js/alerts.js') }}"></script>
+{% if current_user.is_owner %}<script defer src="{{ url_for('static', filename='js/owner-search.js') }}"></script>{% endif %}
 {% endblock %}

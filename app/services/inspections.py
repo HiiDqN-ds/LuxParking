@@ -21,6 +21,7 @@ from ..models import (
     Dispute,
     Inspection,
     InspectionPhoto,
+    InspectionVideo,
     Role,
     Tenant,
     User,
@@ -48,6 +49,11 @@ PHOTO_CONTENT_TYPES = {
     "image/jpeg": "jpg",
     "image/png": "png",
     "image/webp": "webp",
+}
+VIDEO_CONTENT_TYPES = {
+    "video/mp4": "mp4",
+    "video/webm": "webm",
+    "video/quicktime": "mov",
 }
 DAMAGE_KINDS = frozenset(("scratch", "dent", "crack", "broken_part"))
 
@@ -376,6 +382,79 @@ def upload_inspection_photo(
     )
 
 
+def upload_inspection_video(
+    *,
+    tenant_id: int,
+    inspection_id: int,
+    staff_user_id: int,
+    category: str,
+    file_data: bytes,
+    content_type: str,
+    captured_at: datetime,
+) -> InspectionVideo:
+    tenant_id = _tenant_id(tenant_id)
+    if not isinstance(file_data, bytes) or not file_data:
+        raise InspectionValidationError("A non-empty inspection video is required.")
+    max_bytes = current_app.config.get("INSPECTION_MAX_VIDEO_BYTES", 8 * 1024 * 1024)
+    if len(file_data) > max_bytes:
+        raise InspectionValidationError("The inspection video exceeds the upload size limit.")
+    if content_type not in VIDEO_CONTENT_TYPES:
+        raise InspectionValidationError("Only MP4, WebM, and QuickTime inspection videos are accepted.")
+    if content_type == "video/webm":
+        valid_signature = file_data.startswith(b"\x1a\x45\xdf\xa3")
+    else:
+        valid_signature = len(file_data) >= 12 and file_data[4:8] == b"ftyp"
+    if not valid_signature:
+        raise InspectionValidationError("The uploaded file is not a valid inspection video.")
+    if not isinstance(captured_at, datetime) or captured_at.tzinfo is None or captured_at.utcoffset() is None:
+        raise InspectionValidationError("The video capture time must include a timezone.")
+
+    inspection = _load_inspection(tenant_id, inspection_id, lock=True)
+    if inspection.status != "in_progress":
+        raise InspectionConflict("Videos cannot be changed after inspection completion.")
+    if category not in _required_categories(tenant_id):
+        raise InspectionValidationError("This video category is not configured for this tenant.")
+    staff = _load_staff(tenant_id, staff_user_id)
+    extension = VIDEO_CONTENT_TYPES[content_type]
+    digest = hashlib.sha256(file_data).hexdigest()
+    object_key = (
+        f"tenants/{inspection.tenant_id}/bookings/{inspection.booking.booking_ref}/"
+        f"inspections/{inspection.id}/{secrets.token_hex(16)}.{extension}"
+    )
+    _store_object(
+        object_key=object_key,
+        file_data=file_data,
+        content_type=content_type,
+        sha256=digest,
+    )
+    video = InspectionVideo(
+        tenant_id=inspection.tenant_id,
+        inspection_id=inspection.id,
+        category=category,
+        object_key=object_key,
+        sha256=digest,
+        content_type=content_type,
+        size_bytes=len(file_data),
+        booking_ref=inspection.booking.booking_ref,
+        staff_user_id=staff.id,
+        staff_name=staff.name or staff.email,
+        captured_at=captured_at.astimezone(timezone.utc),
+    )
+    db.session.add(video)
+    try:
+        db.session.flush()
+        db.session.commit()
+    except IntegrityError as exc:
+        db.session.rollback()
+        _delete_object(object_key=object_key)
+        raise InspectionConflict("A video for this inspection category already exists.") from exc
+    except Exception:
+        db.session.rollback()
+        _delete_object(object_key=object_key)
+        raise
+    return video
+
+
 def add_damage_mark(
     *,
     tenant_id: int,
@@ -491,6 +570,7 @@ def complete_inspection(
     belongings: str,
     notes: str,
     no_damage_confirmed: bool,
+    require_videos: bool = False,
     vehicle_plate: str = "",
     vehicle_make: str = "",
     vehicle_model: str = "",
@@ -532,6 +612,8 @@ def complete_inspection(
         raise InspectionValidationError("Vehicle profile details exceed the allowed length.")
     if not isinstance(no_damage_confirmed, bool):
         raise InspectionValidationError("The damage declaration must be explicitly confirmed.")
+    if not isinstance(require_videos, bool):
+        raise InspectionValidationError("Video evidence requirement must be explicit.")
 
     photos = db.session.execute(
         select(InspectionPhoto.category).where(
@@ -545,6 +627,20 @@ def complete_inspection(
         raise InspectionValidationError(
             "Missing required photos: " + ", ".join(sorted(missing)) + "."
         )
+    if require_videos:
+        videos = db.session.execute(
+            select(InspectionVideo.category).where(
+                InspectionVideo.tenant_id == tenant_id,
+                InspectionVideo.inspection_id == inspection.id,
+            )
+        ).scalars().all()
+        missing_videos = set(_required_categories(tenant_id)) - set(videos)
+        if missing_videos:
+            raise InspectionValidationError(
+                "Missing required videos: %(categories)s." % {
+                    "categories": ", ".join(sorted(missing_videos))
+                }
+            )
     if "signature" not in photo_categories:
         raise InspectionValidationError("A customer signature is required.")
 
@@ -760,13 +856,21 @@ def purge_expired_inspections(*, tenant_id: int, now: datetime | None = None) ->
         ).scalars().all()
         for photo in photos:
             delete_object(object_key=photo.object_key)
+        videos = db.session.execute(
+            select(InspectionVideo).where(
+                InspectionVideo.tenant_id == inspection.tenant_id,
+                InspectionVideo.inspection_id == inspection.id,
+            )
+        ).scalars().all()
+        for video in videos:
+            delete_object(object_key=video.object_key)
         db.session.delete(inspection)
         try:
             db.session.commit()
         except Exception:
             db.session.rollback()
             current_app.logger.exception(
-                "Could not delete expired inspection %s after deleting its stored images.",
+                "Could not delete expired inspection %s after deleting its stored evidence.",
                 inspection.id,
             )
             raise
@@ -803,6 +907,12 @@ def remove_booking_evidence(*, tenant_id: int, booking_id: int) -> list[str]:
             )
         ).scalars().all():
             keys.append(photo.object_key)
+        for video in db.session.execute(
+            select(InspectionVideo).where(
+                InspectionVideo.tenant_id == tenant_id, InspectionVideo.inspection_id == inspection.id,
+            )
+        ).scalars().all():
+            keys.append(video.object_key)
         db.session.delete(inspection)
     db.session.flush()
     return keys

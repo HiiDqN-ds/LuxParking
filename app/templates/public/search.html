@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block body %}
+<main id="main" class="content-page search-page">
+  <header class="content-header">
+    <a class="brand" href="{{ url_for('public.localized_home', locale=locale) }}">ParkPilot</a>
+    <form class="topbar-search content-top-search" action="{{ url_for('public.localized_search', locale=locale) }}" method="get" role="search">
+      <label class="sr-only" for="search-query">{{ t(locale, 'search.label') }}</label>
+      <div class="topbar-search-controls">
+        <input id="search-query" type="search" name="q" value="{{ query }}" maxlength="100" placeholder="{{ t(locale, 'search.placeholder') }}" required>
+        <button type="submit">{{ t(locale, 'search.submit') }}</button>
+      </div>
+    </form>
+    <nav class="language-switcher" aria-label="{{ t(locale, 'language.label') }}">
+      {% for language in language_links %}
+      <a href="{{ language.url }}" hreflang="{{ language.code }}" lang="{{ language.code }}">{{ language.label }}</a>
+      {% endfor %}
+    </nav>
+  </header>
+  <h1>{{ t(locale, 'search.title') }}</h1>
+  {% if query %}
+    <h2>{{ t(locale, 'search.results') }}</h2>
+    {% if results %}
+      {% for result in results %}
+      <article class="content-card search-result">
+        <h3><a href="{{ result.url }}">{{ result.title }}</a></h3>
+        <p>{{ result.summary }}</p>
+      </article>
+      {% endfor %}
+    {% else %}
+      <p class="empty">{{ t(locale, 'search.no_results') }}</p>
+    {% endif %}
+  {% else %}
+    <p class="muted">{{ t(locale, 'search.empty') }}</p>
+  {% endif %}
+</main>
+{% include "public/_footer.html" %}
+{% endblock %}

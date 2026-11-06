@@ -8,9 +8,9 @@
   'suggestions': [t(locale, 'chat.q1'), t(locale, 'chat.q2'), t(locale, 'chat.q3')]
 } %}
 <div class="chat" id="chat" data-endpoint="{{ url_for('public.chat', tenant_slug=tenant.slug, lot_slug=lot.slug) }}" data-csrf="{{ csrf_token() }}" data-locale="{{ locale }}" data-storage="pp-chat-{{ tenant.slug }}" data-i18n='{{ chat_strings|tojson }}'>
-  <button class="chat-launcher" type="button" aria-expanded="false" aria-controls="chat-panel">
-    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path fill="currentColor" d="M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H9l-5 4v-4H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/></svg>
-    <span>{{ t(locale, 'chat.launcher') }}</span>
+  <button class="chat-launcher" type="button" aria-label="{{ t(locale, 'chat.title') }}" aria-expanded="false" aria-controls="chat-panel">
+    <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H9l-5 4v-4H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><circle cx="8" cy="11.5" r="1.15" fill="var(--chat-dot,#fff)"/><circle cx="12" cy="11.5" r="1.15" fill="var(--chat-dot,#fff)"/><circle cx="16" cy="11.5" r="1.15" fill="var(--chat-dot,#fff)"/></svg>
+    <span class="chat-launcher-label">{{ t(locale, 'chat.launcher') }}</span>
   </button>
   <section class="chat-panel" id="chat-panel" role="dialog" aria-label="{{ t(locale, 'chat.title') }}" hidden>
     <header class="chat-head">
