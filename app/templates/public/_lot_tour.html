@@ -1,23 +1,35 @@
-{# Virtual lot walkthrough. Real <img> tags are crawlable; works without JS as a stacked gallery. #}
+{# Virtual lot walkthrough + gallery. Every photo is shown COMPLETE (no cropping): object-fit:contain on a blurred copy of the same photo.
+   Real <img> tags are crawlable; works without JS as a stacked gallery. #}
 {% set _scenes = [
- ('courtyard', 1200, 1426, [480,800,1200,1600], '50% 62%'),
- ('main-lot', 1200, 1363, [480,800,1200,1600], '50% 60%'),
- ('walled-bays', 1200, 676, [480,800,1200], '50% 55%'),
- ('arrival-bays', 1200, 679, [480,800,1200], '50% 55%')
+ ('tour-1', 1200, 900, [480, 800, 1200, 1600]),
+ ('tour-2', 1200, 900, [480, 800, 1200, 1600]),
+ ('tour-3', 1200, 900, [480, 800, 1200, 1600]),
+ ('tour-4', 1200, 900, [480, 800, 1200, 1600])
 ] %}
+{% set _gallery = [
+ ('foto-1', 1200, 1600, [480, 800, 1200]),
+ ('foto-2', 1200, 900, [480, 800, 1200, 1600]),
+ ('foto-3', 1200, 1600, [480, 800, 1200]),
+ ('foto-4', 1200, 900, [480, 800, 1200, 1600]),
+ ('foto-5', 1200, 900, [480, 800, 1200, 1600]),
+ ('foto-6', 1200, 1600, [480, 800, 1200])
+] %}
+{% macro _img(key, w, h, sizes, alt, sizes_attr, lazy=True) -%}
+<img src="{{ url_for('static', filename='img/lot/' ~ key ~ '-' ~ ([w, 1200]|min) ~ '.webp') }}"
+     srcset="{% for sw in sizes %}{{ url_for('static', filename='img/lot/' ~ key ~ '-' ~ sw ~ '.webp') }} {{ sw }}w{{ ',' if not loop.last }}{% endfor %}"
+     sizes="{{ sizes_attr }}" width="{{ w }}" height="{{ h }}" alt="{{ alt }}" {% if lazy %}loading="lazy" decoding="async"{% else %}fetchpriority="high"{% endif %}>
+{%- endmacro %}
 <section class="lot-tour" id="lot-tour" aria-labelledby="lot-tour-h" data-lot-tour
          data-pause="{{ t(locale, 'tour.pause') }}" data-play="{{ t(locale, 'tour.play') }}">
   <h2 id="lot-tour-h">{{ t(locale, 'tour.title') }}</h2>
+  <p class="lt-sub">{{ t(locale, 'tour.sub') }}</p>
   <div class="lt-stage">
     <ol class="lt-scenes">
-      {% for key, w, h, sizes, fx in _scenes %}
+      {% for key, w, h, sizes in _scenes %}
       {% set n = loop.index %}
-      <li class="lt-scene{{ ' is-on' if loop.first }}" data-scene style="--fx:{{ fx }}">
+      <li class="lt-scene{{ ' is-on' if loop.first }}" data-scene style="--bg:url('{{ url_for('static', filename='img/lot/' ~ key ~ '-480.webp') }}')">
         <figure>
-          <img src="{{ url_for('static', filename='img/lot/' ~ key ~ '-1200.webp') }}"
-               srcset="{% for sw in sizes %}{{ url_for('static', filename='img/lot/' ~ key ~ '-' ~ sw ~ '.webp') }} {{ sw }}w{{ ',' if not loop.last }}{% endfor %}"
-               sizes="(min-width:960px) 880px, 100vw" width="{{ w }}" height="{{ h }}"
-               alt="{{ t(locale, 'tour.s' ~ n ~ '.alt') }}" {% if loop.first %}fetchpriority="high"{% else %}loading="lazy" decoding="async"{% endif %}>
+          {{ _img(key, w, h, sizes, t(locale, 'tour.s' ~ n ~ '.alt'), '(min-width:960px) 880px, 100vw', loop.index > 1) }}
           <figcaption><strong>{{ t(locale, 'tour.s' ~ n ~ '.title') }}</strong> {{ t(locale, 'tour.s' ~ n ~ '.cap') }}</figcaption>
         </figure>
       </li>
@@ -29,7 +41,26 @@
       <button type="button" class="lt-play" data-play-btn aria-pressed="true">{{ t(locale, 'tour.pause') }}</button>
     </div>
   </div>
+  <p class="lt-caption" data-cap aria-live="polite" hidden></p>
   <ul class="lt-steps" hidden data-steps>
-    {% for key, w, h, sizes, fx in _scenes %}<li><button type="button" data-go="{{ loop.index0 }}"{{ ' aria-current="true"' if loop.first }}>{{ t(locale, 'tour.s' ~ loop.index ~ '.title') }}</button></li>{% endfor %}
+    {% for key, w, h, sizes in _scenes %}<li><button type="button" data-go="{{ loop.index0 }}"{{ ' aria-current="true"' if loop.first }}>{{ t(locale, 'tour.s' ~ loop.index ~ '.title') }}</button></li>{% endfor %}
   </ul>
 </section>
+
+<section class="lot-gallery" id="galerie" aria-labelledby="lot-gallery-h">
+  <h2 id="lot-gallery-h">{{ t(locale, 'tour.gallery.title') }}</h2>
+  <ul class="lg-grid">
+    {% for key, w, h, sizes in _gallery %}
+    <li><a href="{{ url_for('static', filename='img/lot/' ~ key ~ '-' ~ sizes[-1] ~ '.webp') }}" target="_blank" rel="noopener" aria-label="{{ t(locale, 'tour.gallery.open') }} {{ loop.index }}">
+      {{ _img(key, w, h, sizes, (t(locale, 'tour.s6.alt') if key == 'foto-6' else t(locale, 'tour.gallery.alt') ~ ' ' ~ loop.index), '(min-width:960px) 280px, (min-width:600px) 33vw, 100vw') }}
+    </a></li>
+    {% endfor %}
+  </ul>
+</section>
+
+<dialog class="lg-lightbox" data-lightbox aria-label="{{ t(locale, 'tour.gallery.title') }}">
+  <button type="button" class="lg-close" data-close aria-label="{{ t(locale, 'chat.close') }}">&times;</button>
+  <button type="button" class="lg-nav lg-prev" data-prev aria-label="{{ t(locale, 'tour.prev') }}">&lsaquo;</button>
+  <figure><img alt="" data-img><figcaption data-count></figcaption></figure>
+  <button type="button" class="lg-nav lg-next" data-next aria-label="{{ t(locale, 'tour.next') }}">&rsaquo;</button>
+</dialog>

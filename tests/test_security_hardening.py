@@ -38,6 +38,16 @@ def test_csp_nonce_changes_per_request(client):
     assert len(nonces) == 3
 
 
+def test_csp_websocket_origin_uses_configured_site_url(client, app):
+    app.config["SITE_URL"] = "https://canonical.example"
+    response = client.get("/admin/login", headers={"Host": "attacker.example"})
+    connect_src = re.search(
+        r"connect-src ([^;]+)", response.headers["Content-Security-Policy"]
+    ).group(1)
+    assert "wss://canonical.example" in connect_src
+    assert "attacker.example" not in connect_src
+
+
 def test_api_responses_get_a_locked_down_csp(client):
     assert client.get("/healthz").headers["Content-Security-Policy"].startswith("default-src 'none'")
 

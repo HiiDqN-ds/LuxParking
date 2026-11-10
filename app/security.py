@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import secrets
 import time
+from urllib.parse import urlsplit
 
 from flask import abort, current_app, g, redirect, request, session, url_for
 from flask_login import current_user, logout_user
@@ -19,12 +20,25 @@ limiter = Limiter(key_func=get_remote_address, default_limits=[], headers_enable
 
 _STATIC_PREFIXES = ("/static/",)
 _SENSITIVE_PREFIXES = ("/admin", "/staff", "/booking/", "/t/", "/billing", "/reports")
+_SENSITIVE_ENDPOINTS = frozenset(
+    {"public.hold_confirmation", "public.localized_hold_confirmation"}
+)
 _IDLE_KEY = "_last_seen"
 
 
 def _csp_for_request(nonce: str) -> str:
     app = current_app
-    host = request.host
+    configured_site_url = app.config.get("SITE_URL")
+    configured_origin = urlsplit(configured_site_url) if configured_site_url else None
+    host = (
+        configured_origin.netloc
+        if configured_origin
+        and configured_origin.scheme in {"http", "https"}
+        and configured_origin.hostname
+        and not configured_origin.username
+        and not configured_origin.password
+        else request.host
+    )
     if request.path == "/v1/docs":
         # Swagger UI is loaded from a CDN and starts with an inline call. No cookies or secrets live on this page.
         return ("default-src 'none'; script-src 'self' https://unpkg.com 'unsafe-inline'; "
@@ -76,9 +90,14 @@ def init_security(app) -> None:
         resp.headers.setdefault(
             "Permissions-Policy",
             "camera=(self), microphone=(), geolocation=(), payment=(self), usb=(), serial=(), bluetooth=(), interest-cohort=()")
-        if request.path.startswith(_SENSITIVE_PREFIXES) and not request.path.startswith("/admin/avatar/"):
+        if (
+            request.path.startswith(_SENSITIVE_PREFIXES)
+            or request.endpoint in _SENSITIVE_ENDPOINTS
+        ) and not request.path.startswith("/admin/avatar/"):
             resp.headers["Cache-Control"] = "no-store"  # customer data and tokens in URLs: never keep a copy
             resp.headers.setdefault("Pragma", "no-cache")
+        if request.endpoint in _SENSITIVE_ENDPOINTS:
+            resp.headers["X-Robots-Tag"] = "noindex, nofollow"
         if app.config["APP_ENV"] == "production":
             resp.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
         return resp

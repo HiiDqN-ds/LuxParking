@@ -16,6 +16,7 @@
   <meta property="og:description" content="{{ seo.description }}">
   <meta property="og:url" content="{{ seo.canonical }}">
   <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ biz.name if biz and biz.logo_enabled else 'ParkPilot' }}">
   <meta property="og:locale" content="{{ seo.og_locale }}">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="{{ seo.title }}">
@@ -32,7 +33,16 @@
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32.png') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
   <meta name="theme-color" content="#07131F">
-  <meta property="og:image" content="{{ url_for('static', filename='img/luxury-parking-stacked-dark.png', _external=True) }}">
+  {% if seo is defined and seo %}
+  <meta property="og:image" content="{{ seo.image }}">
+  <meta name="twitter:image" content="{{ seo.image }}">
+  {% else %}
+  <meta property="og:image" content="{{ (config.SITE_URL.rstrip('/') ~ url_for('static', filename='img/luxury-parking-stacked-dark.png')) if config.SITE_URL else url_for('static', filename='img/luxury-parking-stacked-dark.png', _external=True) }}">
+  <meta name="twitter:image" content="{{ (config.SITE_URL.rstrip('/') ~ url_for('static', filename='img/luxury-parking-stacked-dark.png')) if config.SITE_URL else url_for('static', filename='img/luxury-parking-stacked-dark.png', _external=True) }}">
+  {% endif %}
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:alt" content="{{ seo.title if seo else 'ParkPilot' }}">
+  <meta name="twitter:image:alt" content="{{ seo.title if seo else 'ParkPilot' }}">
   {% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">

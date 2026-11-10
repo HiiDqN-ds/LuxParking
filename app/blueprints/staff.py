@@ -59,6 +59,7 @@ from ..services.inspections import (
     REQUIRED_PHOTO_CATEGORIES,
     InspectionConflict,
     InspectionError,
+    INSPECTION_VIDEO_CATEGORY,
     add_damage_mark,
     complete_inspection,
     create_inspection,
@@ -535,8 +536,9 @@ def inspection_page(booking_id: int, phase: str):
         inspection=inspection,
         phase=phase,
         draft=read_inspection_draft(inspection) if inspection else {},
-        video_done=len({video.category for video in inspection.videos} & set(REQUIRED_PHOTO_CATEGORIES)) if inspection else 0,
-        required_total=len(REQUIRED_PHOTO_CATEGORIES),
+        video_done=1 if inspection and inspection.videos else 0,
+        required_total=1,
+        video_category=INSPECTION_VIDEO_CATEGORY,
         has_signature=bool(inspection and any(photo.category == "signature" for photo in inspection.photos)),
         mark_count=len(inspection.damage_marks) if inspection else 0,
         required_photos=REQUIRED_PHOTO_CATEGORIES,
@@ -609,7 +611,7 @@ def upload_video(inspection_id: int):
         return redirect(url_for("staff.inspection_page", booking_id=inspection.booking_id, phase=inspection.phase))
     if request.accept_mimetypes.best == "application/json":
         return jsonify(video_id=video.id, category=video.category), 201
-    flash(ui('%(p0)s saved.', p0=ui(PHOTO_LABELS.get(video.category, video.category))), "ok")
+    flash(ui("Video saved."), "ok")
     return redirect(url_for("staff.inspection_page", booking_id=inspection.booking_id, phase=inspection.phase))
 
 

@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from xml.etree import ElementTree
 
 import pytest
 
@@ -308,6 +309,8 @@ def test_public_faq_index_uses_tenant_questions_in_structured_data(client, app):
     assert b"Can I cancel for free?" in response.data
     assert b"The lot operator sets the cancellation terms." in response.data
     assert b"FAQPage" in response.data
+    sitemap = ElementTree.fromstring(client.get("/sitemap.xml").data)
+    assert any(element.tag.endswith("}lastmod") for element in sitemap.iter())
 
 
 def test_api_quote_applies_one_server_validated_discount(client, app):

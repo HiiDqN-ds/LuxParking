@@ -29,6 +29,7 @@ from app.services.bookings import (
 )
 from app.services.inspections import (
     REQUIRED_PHOTO_CATEGORIES,
+    InspectionConflict,
     InspectionNotFound,
     InspectionValidationError,
     add_damage_mark,
@@ -96,16 +97,15 @@ def upload_required_photos(tenant_id, inspection_id):
 
 def upload_required_videos(tenant_id, inspection_id):
     video = b"\x00\x00\x00\x18ftypisom" + b"\x00" * 24
-    for category in REQUIRED_PHOTO_CATEGORIES:
-        upload_inspection_video(
-            tenant_id=tenant_id,
-            inspection_id=inspection_id,
-            staff_user_id=1,
-            category=category,
-            file_data=video,
-            content_type="video/mp4",
-            captured_at=datetime.now(timezone.utc),
-        )
+    upload_inspection_video(
+        tenant_id=tenant_id,
+        inspection_id=inspection_id,
+        staff_user_id=1,
+        category="walkaround",
+        file_data=video,
+        content_type="video/mp4",
+        captured_at=datetime.now(timezone.utc),
+    )
 
 
 def test_upload_stores_verified_hash_and_employee_metadata(app, parking, monkeypatch):
@@ -150,7 +150,7 @@ def test_upload_stores_verified_hash_and_employee_metadata(app, parking, monkeyp
         )
 
 
-def test_video_upload_stores_private_video_with_tenant_and_category_metadata(app, parking, monkeypatch):
+def test_video_upload_stores_private_walkaround_video(app, parking, monkeypatch):
     from app.services import inspections
 
     captured = []
@@ -167,7 +167,7 @@ def test_video_upload_stores_private_video_with_tenant_and_category_metadata(app
         tenant_id=parking[0],
         inspection_id=inspection.id,
         staff_user_id=1,
-        category="front",
+        category="walkaround",
         file_data=video_data,
         content_type="video/mp4",
         captured_at=datetime.now(timezone.utc),
@@ -180,14 +180,25 @@ def test_video_upload_stores_private_video_with_tenant_and_category_metadata(app
     assert video.booking_ref == booking.booking_ref
     assert video.object_key.endswith(".mp4")
     assert captured[0]["file_data"] == video_data
-    assert InspectionVideo.query.filter_by(inspection_id=inspection.id, category="front").one().id == video.id
+    assert InspectionVideo.query.filter_by(inspection_id=inspection.id, category="walkaround").one().id == video.id
+
+    with pytest.raises(InspectionConflict, match="Only one video"):
+        upload_inspection_video(
+            tenant_id=parking[0],
+            inspection_id=inspection.id,
+            staff_user_id=1,
+            category="walkaround",
+            file_data=video_data,
+            content_type="video/mp4",
+            captured_at=datetime.now(timezone.utc),
+        )
 
     with pytest.raises(InspectionValidationError, match="valid inspection video"):
         upload_inspection_video(
             tenant_id=parking[0],
             inspection_id=inspection.id,
             staff_user_id=1,
-            category="back",
+            category="walkaround",
             file_data=b"not a video",
             content_type="video/mp4",
             captured_at=datetime.now(timezone.utc),
@@ -246,6 +257,20 @@ def test_check_in_requires_complete_photo_and_signature_evidence(app, parking, m
         check_in_booking(tenant_id=parking[0], booking_id=booking.id)
 
     upload_required_photos(parking[0], inspection.id)
+    with pytest.raises(InspectionValidationError, match="A vehicle video is required"):
+        complete_inspection(
+            tenant_id=parking[0],
+            inspection_id=inspection.id,
+            staff_user_id=1,
+            fuel_level=60,
+            odometer_km=12000,
+            key_count=2,
+            belongings="Child seat",
+            notes="",
+            no_damage_confirmed=True,
+            require_videos=True,
+        )
+    upload_required_videos(parking[0], inspection.id)
     complete_inspection(
         tenant_id=parking[0],
         inspection_id=inspection.id,
@@ -256,6 +281,7 @@ def test_check_in_requires_complete_photo_and_signature_evidence(app, parking, m
         belongings="Child seat",
         notes="",
         no_damage_confirmed=True,
+        require_videos=True,
     )
 
     assert check_in_booking(tenant_id=parking[0], booking_id=booking.id).status == "checked_in"

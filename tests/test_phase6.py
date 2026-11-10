@@ -19,13 +19,20 @@ def public_lot():
         return tenant.slug, lot.slug, tenant.id, lot.id, spaces[0].id
 
 
-def test_home_language_negotiation_metadata_and_rtl(client):
+def test_home_language_negotiation_metadata_and_rtl(client, app):
+    app.config["SITE_URL"] = "https://canonical.example"
     negotiated = client.get("/", headers={"Accept-Language": "fr-FR,fr;q=0.9"})
     assert negotiated.status_code == 200
     assert b"lang=\"fr\"" in negotiated.data
     assert b"hreflang=\"x-default\"" in negotiated.data
     assert b"rel=\"canonical\"" in negotiated.data
     assert b"og:title" in negotiated.data
+    assert b"og:image:alt" in negotiated.data
+    assert b"twitter:image" in negotiated.data
+    assert b"https://canonical.example/static/img/luxury-parking-stacked-dark.png" in negotiated.data
+    assert b"attacker.example" not in client.get(
+        "/de/", headers={"Host": "attacker.example"}
+    ).data
     assert b"application/ld+json" in negotiated.data
     german_home = client.get("/de/")
     assert "Reservieren Sie Ihren Parkplatz bei".encode() in german_home.data
@@ -103,6 +110,8 @@ def test_localized_hold_keeps_locale_and_is_not_indexable(client):
     confirmation = client.get(response.headers["Location"])
     assert confirmation.status_code == 200
     assert b"noindex,nofollow" in confirmation.data
+    assert confirmation.headers["Cache-Control"] == "no-store"
+    assert confirmation.headers["X-Robots-Tag"] == "noindex, nofollow"
     assert "Ihr Platz ist zehn Minuten reserviert".encode() in confirmation.data
     assert b"dir=\"ltr\"" in confirmation.data
 
@@ -121,3 +130,4 @@ def test_sitemap_and_robots_cover_public_locales(client):
     assert robots.status_code == 200
     assert b"Sitemap: http://" in robots.data
     assert b"Disallow: /admin/" in robots.data
+    assert b"Disallow: /reserve/*/holds/" in robots.data

@@ -1,0 +1,12 @@
+{# Welcome section with the lot's cat. Photos are shown complete (natural aspect ratio, no cropping). #}
+<section class="cat-welcome" aria-labelledby="cat-title">
+  <div class="cat-text">
+    <p class="eyebrow">{{ t(locale, 'cat.eyebrow') }}</p>
+    <h2 id="cat-title">{{ t(locale, 'cat.title') }}</h2>
+    <p class="cat-sub">{{ t(locale, 'cat.sub') }}</p>
+  </div>
+  <div class="cat-photos">
+    <figure><img src="{{ url_for('static', filename='img/lot/katze-1-800.webp') }}" srcset="{{ url_for('static', filename='img/lot/katze-1-480.webp') }} 480w, {{ url_for('static', filename='img/lot/katze-1-800.webp') }} 800w" sizes="(min-width:900px) 240px, 45vw" width="800" height="1067" alt="{{ t(locale, 'cat.alt1') }}" loading="lazy" decoding="async"></figure>
+    <figure><img src="{{ url_for('static', filename='img/lot/katze-2-800.webp') }}" srcset="{{ url_for('static', filename='img/lot/katze-2-480.webp') }} 480w, {{ url_for('static', filename='img/lot/katze-2-800.webp') }} 800w" sizes="(min-width:900px) 240px, 45vw" width="800" height="1067" alt="{{ t(locale, 'cat.alt2') }}" loading="lazy" decoding="async"></figure>
+  </div>
+</section>

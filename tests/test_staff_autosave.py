@@ -51,9 +51,8 @@ def _add_all_photos(parking, inspection, owner):
 
 def _add_all_videos(parking, inspection, owner):
     video = b"\x00\x00\x00\x18ftypisom" + b"\x00" * 24
-    for category in REQUIRED_PHOTO_CATEGORIES:
-        upload_inspection_video(tenant_id=parking[0], inspection_id=inspection.id, staff_user_id=owner, category=category,
-                                file_data=video, content_type="video/mp4", captured_at=datetime.now(timezone.utc))
+    upload_inspection_video(tenant_id=parking[0], inspection_id=inspection.id, staff_user_id=owner, category="walkaround",
+                            file_data=video, content_type="video/mp4", captured_at=datetime.now(timezone.utc))
 
 
 def test_draft_is_saved_cleaned_and_prefills_the_page(client, parking, open_inspection):
@@ -69,6 +68,9 @@ def test_draft_is_saved_cleaned_and_prefills_the_page(client, parking, open_insp
     page = client.get(f"/staff/bookings/{booking.id}/inspections/arrival").get_data(as_text=True)
     for text in ('value="48200"', 'value="60"', 'value="D-AK 2026"', "Gate code 4711", 'id="complete-checklist"'):
         assert text in page, text
+    assert page.count('name="video"') == 1
+    assert 'Record one short video showing all sides of the vehicle.' in page
+    assert 'name="category" value="walkaround"' in page
     assert "checked" in page.split('name="no_damage_confirmed"')[1][:80]
     assert 'id="save-signature"' not in page and "data-upload-url" in page  # the signature saves by itself
 

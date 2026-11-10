@@ -90,62 +90,11 @@
     return "queued";
   }
 
-  function extractVideoFrame(file) {
-    return new Promise((resolve, reject) => {
-      const source = URL.createObjectURL(file);
-      const player = document.createElement("video");
-      player.preload = "metadata";
-      player.muted = true;
-      player.playsInline = true;
-      const cleanUp = () => URL.revokeObjectURL(source);
-      player.onerror = () => { cleanUp(); reject(new Error(ppT("Could not read this video."))); };
-      player.onloadedmetadata = () => {
-        if (!Number.isFinite(player.duration) || player.duration <= 0 || player.duration > 30) {
-          cleanUp();
-          reject(new Error(ppT("Choose a video that is 30 seconds or shorter.")));
-          return;
-        }
-        player.currentTime = Math.min(1, player.duration / 2);
-      };
-      player.onseeked = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = player.videoWidth;
-        canvas.height = player.videoHeight;
-        const context = canvas.getContext("2d");
-        if (!context || !canvas.width || !canvas.height) {
-          cleanUp();
-          reject(new Error(ppT("Could not create a comparison frame from this video.")));
-          return;
-        }
-        context.drawImage(player, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob((blob) => {
-          cleanUp();
-          if (!blob) {
-            reject(new Error(ppT("Could not create a comparison frame from this video.")));
-            return;
-          }
-          resolve(new File([blob], "video-frame.webp", { type: "image/webp" }));
-        }, "image/webp", 0.82);
-      };
-      player.src = source;
-    });
-  }
-
   async function uploadVideoCapture(videoForm, file, status) {
     const category = videoForm.querySelector('[name="category"]')?.value || "";
-    const frameForm = videoForm.closest(".video-evidence-card")?.querySelector("[data-frame-form]");
-    if (!category || !frameForm) throw new Error(ppT("Could not prepare this video for upload."));
+    if (!category) throw new Error(ppT("Could not prepare this video for upload."));
+    await validateVideoDuration(file);
     const csrfToken = videoForm.querySelector('[name="csrf_token"]').value;
-    const frame = await extractVideoFrame(file);
-    const frameResult = await uploadEvidence({
-      form: frameForm,
-      file: frame,
-      category,
-      url: frameForm.action,
-      csrfToken,
-      status,
-      reload: false,
-    });
     const videoId = await window.ParkPilotInspectionQueue.enqueue({
       url: videoForm.action,
       fields: {
@@ -161,16 +110,38 @@
     if (navigator.onLine) {
       const outcomes = await window.ParkPilotInspectionQueue.flush();
       videoResult = outcomes.find((outcome) => outcome.id === videoId);
-      if (videoResult && !videoResult.ok && status) status.textContent = videoResult.message;
+      if (videoResult && !videoResult.ok) {
+        if (status) status.textContent = videoResult.message;
+        return false;
+      }
     }
     await updateQueueCount();
-    if (frameResult === true && videoResult && videoResult.ok) {
+    if (videoResult && videoResult.ok) {
       if (status) status.textContent = ppT("Video saved.");
       reloadAfterDraft();
       return true;
     }
     if (status && !videoResult) status.textContent = ppT("Saved on this device; will upload when online.");
     return "queued";
+  }
+
+  function validateVideoDuration(file) {
+    return new Promise((resolve, reject) => {
+      const source = URL.createObjectURL(file);
+      const player = document.createElement("video");
+      player.preload = "metadata";
+      const cleanUp = () => URL.revokeObjectURL(source);
+      player.onerror = () => { cleanUp(); reject(new Error(ppT("Could not read this video."))); };
+      player.onloadedmetadata = () => {
+        cleanUp();
+        if (!Number.isFinite(player.duration) || player.duration <= 0 || player.duration > 30) {
+          reject(new Error(ppT("Choose a video that is 30 seconds or shorter.")));
+          return;
+        }
+        resolve();
+      };
+      player.src = source;
+    });
   }
 
   async function updateQueueCount() {
@@ -504,73 +475,6 @@
     await updateQueueCount();
     if (outcomes.some((outcome) => outcome.ok)) reloadAfterDraft();
   });
-
-  // Guided capture: one big button, auto-advances through the required angles without reloading.
-  const guided = document.getElementById("guided-capture");
-  const progressBox = document.getElementById("capture-progress");
-  if (guided && progressBox) {
-    const required = JSON.parse(progressBox.dataset.photoCategories || "[]");
-    const done = new Set(JSON.parse(progressBox.dataset.completedCategories || "[]"));
-    const hints = {
-      front: ppT("Stand about 3 m in front. Include the plate and both headlights."),
-      back: ppT("Stand about 3 m behind. Include the plate and both tail lights."),
-      right: ppT("Whole right side, wheels to roof."),
-      left: ppT("Whole left side, wheels to roof."),
-      corner_front_left: ppT("Front-left corner at an angle, bumper and wing."),
-      corner_front_right: ppT("Front-right corner at an angle, bumper and wing."),
-      corner_back_left: ppT("Rear-left corner at an angle."),
-      corner_back_right: ppT("Rear-right corner at an angle."),
-      roof: ppT("Roof from a raised angle if you can."),
-      windshield: ppT("Windshield, to show any chips or cracks."),
-      odometer: ppT("Dashboard with the mileage readable."),
-      fuel_level: ppT("Fuel gauge readable."),
-    };
-    const els = {
-      step: document.getElementById("guided-step"), title: document.getElementById("guided-title"),
-      hint: document.getElementById("guided-hint"), bar: document.getElementById("guided-progress"),
-      status: document.getElementById("guided-status"), button: guided.querySelector(".guided-btn"),
-      input: guided.querySelector('input[type="file"]'),
-    };
-    const nextCategory = () => required.find((category) => !done.has(category));
-    const pretty = (category) => (labels[category] || category.replace(/_/g, " ")).replace(/^./, (c) => c.toUpperCase());
-    function render() {
-      const current = nextCategory();
-      els.bar.max = required.length;
-      els.bar.value = required.filter((category) => done.has(category)).length;
-      guided.hidden = false;
-      if (!current) {
-        els.step.textContent = ppT("All videos captured");
-        els.title.textContent = ppT("Next: customer signature");
-        els.hint.textContent = ppT("Scroll down to mark damage, collect the signature and complete the inspection.");
-        els.button.hidden = true;
-        return;
-      }
-      guided.dataset.current = current;
-      els.step.textContent = ppT("Video %(current)s of %(total)s", { current: els.bar.value + 1, total: required.length });
-      els.title.textContent = pretty(current);
-      els.hint.textContent = hints[current] || "";
-    }
-    els.input.addEventListener("change", async () => {
-      const file = els.input.files && els.input.files[0];
-      const category = guided.dataset.current;
-      if (!file || !category) return;
-      const form = document.querySelector(`[data-video-form] input[name="category"][value="${category}"]`)?.form;
-      if (!form) return;
-      els.status.textContent = ppT("Preparing video…");
-      try {
-        const result = await uploadVideoCapture(form, file, els.status);
-        if (result) {
-          done.add(category);
-          els.status.textContent = result === "queued" ? ppT("Saved on this device. It uploads when you are online.") : ppT("Saved.");
-          render();
-        }
-      } catch (error) {
-        els.status.textContent = error.message || ppT("Could not save this video. Try again.");
-      }
-      els.input.value = "";
-    });
-    render();
-  }
 
   updateQueueCount();
 })();

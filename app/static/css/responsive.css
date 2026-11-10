@@ -105,3 +105,27 @@ pre{overflow:auto}
 @media(prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
 }
+
+/* ===== Chat assistant: always visible, high contrast, same look on every screen ===== */
+.chat{z-index:90;inset-block-end:max(1rem,env(safe-area-inset-bottom,0px));inset-inline-end:max(1rem,env(safe-area-inset-right,0px));max-width:calc(100vw - 1.5rem)}
+.chat .chat-launcher{display:inline-flex;align-items:center;justify-content:center;gap:.6rem;width:auto;height:auto;min-width:3.5rem;min-height:3.5rem;padding:.7rem 1.2rem;border:2px solid #E09F1F;border-radius:999px;background:#fff;color:#08232d;--chat-dot:#fff;font-size:1rem;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.45),0 0 0 5px rgba(224,159,31,.35)}
+.chat .chat-launcher[hidden]{display:none}
+.chat .chat-launcher svg{width:1.6rem;height:1.6rem;color:#0F4C5C}
+.chat .chat-launcher-label{position:static;width:auto;height:auto;margin:0;clip:auto;overflow:visible;white-space:nowrap}
+@media (prefers-reduced-motion:no-preference){.chat .chat-launcher{animation:chat-ring 2.8s ease-out 1.2s 3}@keyframes chat-ring{0%{box-shadow:0 10px 30px rgba(0,0,0,.45),0 0 0 0 rgba(224,159,31,.7)}100%{box-shadow:0 10px 30px rgba(0,0,0,.45),0 0 0 18px rgba(224,159,31,0)}}}
+.chat-panel{width:min(400px,calc(100vw - 1.5rem));height:min(620px,calc(100dvh - 2rem));border:1px solid color-mix(in srgb,var(--ink) 25%,var(--line));box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.chat-head{background:#0b3540;min-height:3.75rem}.chat-head strong{font-size:1.05rem}
+.chat-log{padding:1rem;gap:.85rem}
+.chat-bubble{font-size:1rem;line-height:1.5;max-width:min(90%,22rem)}
+.chat-user .chat-bubble{background:#0F4C5C;border-color:#0F4C5C}
+.chat-chip{font-size:.9rem;padding:.5rem .85rem;min-height:40px;text-align:start}
+.chat-form input{font-size:16px;min-height:44px}
+.chat-form .btn{min-height:44px;padding-inline:1.1rem}
+@media (max-width:899px){
+  .chat .chat-launcher{width:auto;border-radius:999px}
+  body:has(.home-sticky-cta:not(.is-hidden)) .chat{inset-block-end:calc(5.6rem + env(safe-area-inset-bottom,0px))}
+  body:has(.home-sticky-cta.is-hidden) .chat{inset-block-end:max(1rem,env(safe-area-inset-bottom,0px))}
+  .chat-panel{width:calc(100vw - 1.2rem);height:calc(100dvh - 1.5rem - env(safe-area-inset-bottom,0px));max-height:none;min-height:0}
+}
+@media (max-width:360px){.chat .chat-launcher-label{display:none}.chat .chat-launcher{width:3.5rem;padding:.7rem}}
+

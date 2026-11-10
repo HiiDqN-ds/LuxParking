@@ -17,10 +17,9 @@
   </form>
 </section>
 {% else %}
-<div class="capture-progress" id="capture-progress"
-     data-photo-categories='{{ required_photos|tojson }}'
-     data-completed-categories='{{ inspection.videos|map(attribute="category")|list|tojson }}'>
-  <span id="capture-count">{{ _('Vehicle videos: %(p0)s', p0=(inspection.videos|length)) }}</span>
+{% if inspection.status != "completed" %}
+<div class="capture-progress">
+  <span id="capture-count">{{ _('Vehicle videos: %(p0)s', p0=(1 if inspection.videos else 0)) }}</span>
   <span id="upload-queue-count" aria-live="polite">{{ _('Offline queue: 0') }}</span>
 </div>
 {% if phase == "departure" and arrival_photos %}
@@ -46,66 +45,70 @@
   </div>
 </section>
 {% endif %}
-{% if inspection.status != "completed" %}
-<section class="panel guided" id="guided-capture" aria-labelledby="guided-title" hidden>
-  <p class="eyebrow" id="guided-step"></p>
-  <h2 id="guided-title"></h2>
-  <p class="muted" id="guided-hint"></p>
-  <progress id="guided-progress" value="0" max="12" aria-label="{{ _('Video progress') }}"></progress>
-  <label class="btn btn-primary btn-lg guided-btn">{{ _('Record video') }}<input type="file" accept="video/mp4,video/webm,video/quicktime" capture="environment" hidden></label>
-  <p class="muted" id="guided-status" role="status" aria-live="polite"></p>
-</section>
 <section class="panel" aria-labelledby="photo-heading">
-  <h2 id="photo-heading">{{ _('Vehicle videos') }}</h2>
-  <p class="muted">{{ _('Record a short video for each vehicle view. A still frame is saved automatically for before-and-after comparison.') }}</p>
+  <h2 id="photo-heading">{{ _('Vehicle photos') }}</h2>
   <div class="evidence-grid">
     {% for category in required_photos %}
     {% set existing = inspection.photos|selectattr("category", "equalto", category)|first %}
-    {% set existing_video = inspection.videos|selectattr("category", "equalto", category)|first %}
-    <article class="evidence-form video-evidence-card">
+    <article class="evidence-form">
       <strong class="evidence-label">{{ photo_labels.get(category, category.replace("_", " ")|title)|tr }}</strong>
-      {% if existing_video %}
-        <span class="evidence-done">{{ _('Video saved · %(p0)s', p0=(existing_video.staff_name)) }}</span>
-        <video class="inspection-video" controls playsinline preload="metadata" src="{{ url_for('staff.video', video_id=existing_video.id) }}"></video>
-        {% if existing %}<a class="evidence-preview" href="{{ url_for('staff.photo', photo_id=existing.id) }}">{{ _('View comparison frame') }}</a>{% endif %}
+      {% if existing %}
+        <span class="evidence-done">{{ _('Photo saved.') }}</span>
+        <a class="evidence-preview" href="{{ url_for('staff.photo', photo_id=existing.id) }}">{{ _('View photo') }}</a>
       {% else %}
-      <form class="video-upload-form" method="post" enctype="multipart/form-data"
-            action="{{ url_for('staff.upload_video', inspection_id=inspection.id) }}" data-video-form>
+      <form method="post" enctype="multipart/form-data"
+            action="{{ url_for('staff.upload_photo', inspection_id=inspection.id) }}" data-evidence-form>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="category" value="{{ category }}">
         <input type="hidden" name="captured_at" value="">
-        <label class="btn video-capture-control">{{ _('Record video') }}
-          <input type="file" name="video" accept="video/mp4,video/webm,video/quicktime" capture="environment" required>
+        <label class="btn video-capture-control">{{ _('Take photo') }}
+          <input type="file" name="photo" accept="image/*" capture="environment" required>
         </label>
         <span class="upload-state" aria-live="polite"></span>
       </form>
       {% endif %}
-      <form class="frame-upload-form" method="post" enctype="multipart/form-data"
-          action="{{ url_for('staff.upload_photo', inspection_id=inspection.id) }}" data-frame-form>
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="category" value="{{ category }}">
-      <input type="hidden" name="captured_at" value="">
-      </form>
     </article>
     {% endfor %}
-    {% set signature = inspection.photos|selectattr("category", "equalto", "signature")|first %}
-    {% if signature %}
-      <div class="evidence-label"><span>{{ _('Customer signature') }}</span><span class="evidence-done">{{ _('Signed · %(p0)s', p0=(signature.staff_name)) }}</span>
-        <a class="evidence-preview" href="{{ url_for('staff.photo', photo_id=signature.id) }}">{{ _('View signature') }}</a></div>
-    {% else %}
-      <div class="signature-panel">
-        <label for="customer-signature"><strong>{{ _('Customer signature (required)') }}</strong></label>
-        <canvas id="customer-signature" width="720" height="220" aria-label="{{ _('Sign inside this box') }}"
-                data-upload-url="{{ url_for('staff.upload_photo', inspection_id=inspection.id) }}" data-csrf="{{ csrf_token() }}"></canvas>
-        <p class="muted">{{ _('The signature saves automatically when the customer lifts the pen.') }}</p>
-        <div class="actions">
-          <button class="btn" type="button" id="clear-signature">{{ _('Clear signature') }}</button>
-        </div>
-        <span class="upload-state" id="signature-state" aria-live="polite"></span>
-      </div>
-    {% endif %}
   </div>
 </section>
+<section class="panel" aria-labelledby="video-heading">
+  <h2 id="video-heading">{{ _('Vehicle videos') }}</h2>
+  <p class="muted">{{ _('Record one short video showing all sides of the vehicle.') }}</p>
+  {% set existing_video = inspection.videos|first %}
+  {% if existing_video %}
+    <span class="evidence-done">{{ _('Video saved.') }}</span>
+    <video class="inspection-video" controls playsinline preload="metadata" src="{{ url_for('staff.video', video_id=existing_video.id) }}"></video>
+  {% elif inspection.status != "completed" %}
+    <form class="video-upload-form" method="post" enctype="multipart/form-data"
+          action="{{ url_for('staff.upload_video', inspection_id=inspection.id) }}" data-video-form>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="category" value="{{ video_category }}">
+      <label class="btn video-capture-control">{{ _('Record video') }}
+        <input type="file" name="video" accept="video/mp4,video/webm,video/quicktime" capture="environment" required>
+      </label>
+      <span class="upload-state" aria-live="polite"></span>
+    </form>
+  {% endif %}
+</section>
+{% set signature = inspection.photos|selectattr("category", "equalto", "signature")|first %}
+{% if signature %}
+<section class="panel">
+  <h2>{{ _('Customer signature') }}</h2>
+  <span class="evidence-done">{{ _('Signed · %(p0)s', p0=(signature.staff_name)) }}</span>
+  <a class="evidence-preview" href="{{ url_for('staff.photo', photo_id=signature.id) }}">{{ _('View signature') }}</a>
+</section>
+{% elif inspection.status != "completed" %}
+<section class="panel signature-panel">
+  <label for="customer-signature"><strong>{{ _('Customer signature (required)') }}</strong></label>
+  <canvas id="customer-signature" width="720" height="220" aria-label="{{ _('Sign inside this box') }}"
+          data-upload-url="{{ url_for('staff.upload_photo', inspection_id=inspection.id) }}" data-csrf="{{ csrf_token() }}"></canvas>
+  <p class="muted">{{ _('The signature saves automatically when the customer lifts the pen.') }}</p>
+  <div class="actions">
+    <button class="btn" type="button" id="clear-signature">{{ _('Clear signature') }}</button>
+  </div>
+  <span class="upload-state" id="signature-state" aria-live="polite"></span>
+</section>
+{% endif %}
 <section class="panel" aria-labelledby="damage-heading">
   <h2 id="damage-heading">{{ _('Vehicle damage') }}</h2>
   {% if phase == "departure" and arrival_marks %}
@@ -227,19 +230,19 @@
   </form>
   {% endif %}
 </section>
-{% else %}
-<section class="panel">
-  <h2>{{ _('Inspection report') }}</h2>
-  <p class="evidence-done">{{ _('This inspection is complete. Its evidence and customer signature are locked.') }}</p>
-  {% if inspection.phase == "departure" and arrival_marks %}
-    <h3>{{ _('Arrival damage comparison') }}</h3>
-    <ul class="damage-list">
-      {% for mark in arrival_marks %}
-      <li>{{ mark.kind|title|tr }} · {{ mark.notes or _("No note") }} · {{ _("Matched") if mark.id in inspection.damage_marks|map(attribute="matched_damage_id")|list else _("No matching departure mark") }}</li>
-      {% endfor %}
-    </ul>
+  {% else %}
+  <section class="panel">
+    <h2>{{ _('Inspection report') }}</h2>
+    <p class="evidence-done">{{ _('This inspection is complete. Its evidence and customer signature are locked.') }}</p>
+    {% if inspection.phase == "departure" and arrival_marks %}
+      <h3>{{ _('Arrival damage comparison') }}</h3>
+      <ul class="damage-list">
+        {% for mark in arrival_marks %}
+        <li>{{ mark.kind|title|tr }} · {{ mark.notes or _("No note") }} · {{ _("Matched") if mark.id in inspection.damage_marks|map(attribute="matched_damage_id")|list else _("No matching departure mark") }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
   {% endif %}
-</section>
-{% endif %}
-{% endif %}
+  {% endif %}
 {% endblock %}

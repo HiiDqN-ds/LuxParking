@@ -146,6 +146,9 @@ def _seo_context(
         "title": title,
         "description": description,
         "locale": locale,
+        "image": _absolute_url(
+            url_for("static", filename="img/luxury-parking-stacked-dark.png")
+        ),
         "og_locale": {
             "de": "de_DE",
             "en": "en_US",
@@ -783,6 +786,10 @@ def robots():
         "Allow: /\n"
         "Disallow: /admin/\n"
         "Disallow: /staff/\n"
+        "Disallow: /reserve/*/holds/\n"
+        "Disallow: /reserve/*/availability\n"
+        "Disallow: /*/reserve/*/holds/\n"
+        "Disallow: /*/reserve/*/availability\n"
         f"Sitemap: {site_root}/sitemap.xml\n"
     )
     response.mimetype = "text/plain"
@@ -795,13 +802,14 @@ def sitemap():
     root = Element(f"{{{XML_NAMESPACE}}}urlset")
     root.set("xmlns:xhtml", XHTML_NAMESPACE)
     locale_list = supported_locales()
-    localized_pages: list[tuple[str, str, dict]] = []
+    localized_pages: list[tuple[str, str, dict, datetime | None]] = []
     for locale in locale_list:
         localized_pages.append(
             (
                 "public.localized_home",
                 _localized_path("public.localized_home", locale),
                 {"locale": locale},
+                None,
             )
         )
     lots = db.session.execute(
@@ -825,6 +833,7 @@ def sitemap():
                     "public.localized_reserve",
                     _localized_path("public.localized_reserve", **values),
                     values,
+                    None,
                 )
             )
     content_pages = db.session.execute(
@@ -840,6 +849,14 @@ def sitemap():
         (tenant_slug, page.kind, page.locale)
         for page, tenant_slug in content_pages
     }
+    content_index_lastmod: dict[tuple[str, str, str], datetime] = {}
+    for page, tenant_slug in content_pages:
+        key = (tenant_slug, page.kind, page.locale)
+        changed_at = page.updated_at or page.published_at
+        if changed_at is not None and (
+            key not in content_index_lastmod or changed_at > content_index_lastmod[key]
+        ):
+            content_index_lastmod[key] = changed_at
     for tenant_slug, kind, locale in sorted(content_indexes):
         values = {"locale": locale, "tenant_slug": tenant_slug, "kind": kind}
         localized_pages.append(
@@ -847,6 +864,7 @@ def sitemap():
                 "public.localized_content_index",
                 _localized_path("public.localized_content_index", **values),
                 values,
+                content_index_lastmod.get((tenant_slug, kind, locale)),
             )
         )
     for page, tenant_slug in content_pages:
@@ -861,11 +879,14 @@ def sitemap():
                 "public.localized_content_page",
                 _localized_path("public.localized_content_page", **values),
                 values,
+                page.updated_at or page.published_at,
             )
         )
-    for endpoint, path, values in localized_pages:
+    for endpoint, path, values, lastmod in localized_pages:
         url_element = SubElement(root, f"{{{XML_NAMESPACE}}}url")
         SubElement(url_element, f"{{{XML_NAMESPACE}}}loc").text = _absolute_url(path)
+        if lastmod is not None:
+            SubElement(url_element, f"{{{XML_NAMESPACE}}}lastmod").text = lastmod.isoformat()
         if endpoint == "public.localized_content_page":
             page_locales = [
                 page.locale

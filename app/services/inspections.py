@@ -55,6 +55,7 @@ VIDEO_CONTENT_TYPES = {
     "video/webm": "webm",
     "video/quicktime": "mov",
 }
+INSPECTION_VIDEO_CATEGORY = "walkaround"
 DAMAGE_KINDS = frozenset(("scratch", "dent", "crack", "broken_part"))
 
 
@@ -412,8 +413,18 @@ def upload_inspection_video(
     inspection = _load_inspection(tenant_id, inspection_id, lock=True)
     if inspection.status != "in_progress":
         raise InspectionConflict("Videos cannot be changed after inspection completion.")
-    if category not in _required_categories(tenant_id):
-        raise InspectionValidationError("This video category is not configured for this tenant.")
+    if category != INSPECTION_VIDEO_CATEGORY:
+        raise InspectionValidationError("The inspection video must be a walkaround video.")
+    existing_video = db.session.execute(
+        select(InspectionVideo.id)
+        .where(
+            InspectionVideo.tenant_id == tenant_id,
+            InspectionVideo.inspection_id == inspection.id,
+        )
+        .limit(1)
+    ).scalar_one_or_none()
+    if existing_video is not None:
+        raise InspectionConflict("Only one video is allowed per inspection.")
     staff = _load_staff(tenant_id, staff_user_id)
     extension = VIDEO_CONTENT_TYPES[content_type]
     digest = hashlib.sha256(file_data).hexdigest()
@@ -628,19 +639,14 @@ def complete_inspection(
             "Missing required photos: " + ", ".join(sorted(missing)) + "."
         )
     if require_videos:
-        videos = db.session.execute(
-            select(InspectionVideo.category).where(
+        video_exists = db.session.execute(
+            select(InspectionVideo.id).where(
                 InspectionVideo.tenant_id == tenant_id,
                 InspectionVideo.inspection_id == inspection.id,
-            )
-        ).scalars().all()
-        missing_videos = set(_required_categories(tenant_id)) - set(videos)
-        if missing_videos:
-            raise InspectionValidationError(
-                "Missing required videos: %(categories)s." % {
-                    "categories": ", ".join(sorted(missing_videos))
-                }
-            )
+            ).limit(1)
+        ).scalar_one_or_none()
+        if video_exists is None:
+            raise InspectionValidationError("A vehicle video is required.")
     if "signature" not in photo_categories:
         raise InspectionValidationError("A customer signature is required.")
 
